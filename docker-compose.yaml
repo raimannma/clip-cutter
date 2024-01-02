@@ -23,6 +23,8 @@ services:
     volumes:
       - ./matches:/app/matches
       - ./clips:/app/clips
+      - ./twitch-dl:/usr/local/bin/twitch-dl
+      - ./model.onnx:/app/model.onnx
     depends_on:
       redis:
         condition: service_healthy

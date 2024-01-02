@@ -13,7 +13,6 @@ for channel in $(jq -r '.[] | .channel' users.json); do
   for video in $(twitch-dl videos "$channel" --all -t archive -j | jq '.videos' | jq -r '.[].id'); do
       echo "Processing $video";
       docker-compose run --rm --entrypoint "clip-cutter -v $video -r '$riot_ids' --remove-matches" clip_cutter;
-      exit 0;
       rclone move -P clips/ Nextcloud:ClipCutter/New/"$channel"/;
       rm -r clips/*;
   done
