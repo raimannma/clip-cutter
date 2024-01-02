@@ -17,3 +17,6 @@ for channel in $(jq -r '.[] | .channel' users.json); do
       rm -r clips/*;
   done
 done
+
+docker-compose down
+docker rm ghcr.io/raimannma/clip-cutter
