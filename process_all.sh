@@ -28,8 +28,7 @@ for channel in $(jq -r '.[] | .channel' users.json); do
       echo "Processing $video";
       docker-compose run --rm --entrypoint "clip-cutter -v $video -r '$riot_ids' --remove-matches" clip_cutter || break;
       rclone move -P clips/ Nextcloud:ClipCutter/"$channel"/ || break;
-      rm -r clips/*;
-      rm -r matches/*;
+      clean
   done
 done
 
