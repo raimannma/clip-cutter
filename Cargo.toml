@@ -1,0 +1,39 @@
+[package]
+name = "clip-cutter"
+version = "0.1.0"
+edition = "2021"
+authors = ["Manuel Raimann <raimannma@outlook.de>"]
+description = "A tool to cut clips from a stream"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = 'abort'
+strip = true
+
+[dependencies]
+clap = { version = "4.4.12", features = ["derive"] }
+futures = "0.3.30"
+kdam = "0.5.1"
+reqwest = { version = "0.11.23", features = ["blocking"] }
+time = { version = "0.3.31", features = ["parsing", "formatting"] }
+tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1.6.1", features = ["v4"] }
+valorant_api_official = "0.0.6"
+image =  "0.24.7"
+serde_json = "1.0.110"
+serde = "1.0.194"
+ffmpeg-sidecar = "0.5.1"
+itertools = "0.12.0"
+ndarray = "0.15"
+log = "0.4.20"
+rand = "0.8.5"
+lazy_static = "1.4.0"
+cached = { version = "0.46.1", features = ["tokio", "async"] }
+dotenv = "0.15.0"
+env_logger = "0.10.1"
+disk-persist = "0.1.0"
+tpe = { git = "https://github.com/raimannma/tpe", version = "0.2.0" }
+ort = "1.16.3"
+filetime_creation = "0.1.6"
+redis = "0.24.0"

@@ -1,0 +1,11 @@
+/target
+.env
+.idea/
+vods/
+matches/
+kill-data/
+results/
+/clips/
+/model.p
+venv/
+users.json

@@ -1,0 +1,9 @@
+/target
+.env
+.idea/
+vods/
+matches/
+kill-data/
+/clips/
+/model.p
+venv/
