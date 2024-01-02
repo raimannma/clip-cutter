@@ -2,20 +2,23 @@
 
 trap stop SIGINT
 
+clean() {
+  echo "Cleaning..."
+  mkdir -p clips;
+  rm -rf clips/*;
+
+  mkdir -p matches;
+  rm -rf matches/*;
+}
+
 stop() {
   echo "Stopping..."
-  rm -r clips/*;
-  rm -r matches/*;
   docker-compose down
-  docker rm ghcr.io/raimannma/clip-cutter
+  docker image rm ghcr.io/raimannma/clip-cutter
   exit 0
 }
 
-mkdir -p clips;
-rm -rf clips/*;
-
-mkdir -p matches;
-rm -rf matches/*;
+clean
 
 for channel in $(jq -r '.[] | .channel' users.json); do
   echo "Processing $channel"
@@ -30,4 +33,5 @@ for channel in $(jq -r '.[] | .channel' users.json); do
   done
 done
 
+clean
 stop
