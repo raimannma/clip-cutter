@@ -22,9 +22,9 @@ def train():
     no_kills = np.sum(y == 0)
     kills = np.sum(y == 1)
     train_size = int(0.9 * min(no_kills, kills))
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, shuffle=True, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, shuffle=True)
 
-    classifier = SVC(verbose=True, tol=1e-5, max_iter=10000)
+    classifier = SVC(verbose=True, tol=1e-6, max_iter=10000)
 
     classifier.fit(X_train, y_train)
 
@@ -80,7 +80,7 @@ def benchmark():
     # warmup
     for img in X[:10]:
         model.predict([img])
-    for img in tqdm(X, desc='Benchmarking'):
+    for img in tqdm(X[:1000], desc='Benchmarking'):
         start = time.time()
         model.predict([img])
         end = time.time()

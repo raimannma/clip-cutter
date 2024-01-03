@@ -116,7 +116,7 @@ async fn process_match(
         return None;
     }
 
-    if (detected_kill_events.len() as i64) < (match_kill_events.len() as i64 - 5) {
+    if (detected_kill_events.len() as i64) < (match_kill_events.len() as i64 / 2) {
         error!("Fewer detected kill events than match kill events: Detected Kills: {}, Match Kills: {}", detected_kill_events.len(), match_kill_events.len());
         return None;
     }
