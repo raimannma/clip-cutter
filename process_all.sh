@@ -1,5 +1,7 @@
 #!/bin/bash
 
+docker-compose up -d redis --wait;
+
 trap stop SIGINT
 
 clean() {
