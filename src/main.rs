@@ -70,9 +70,12 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bo
         .expect("Failed to find matches");
 
     for valo_match in matches {
-        process_match(puuids, vod_id, vod_interval, &valo_match, remove_matches)
+        if process_match(puuids, vod_id, vod_interval, &valo_match, remove_matches)
             .await
-            .expect("Failed to process match");
+            .is_none()
+        {
+            error!("Failed to process match");
+        }
     }
 }
 
