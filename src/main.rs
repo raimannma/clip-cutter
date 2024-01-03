@@ -13,7 +13,7 @@ use filetime_creation::{set_file_times, FileTime};
 use itertools::Itertools;
 use kdam::tqdm;
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::{debug, error, info};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::path::Path;
@@ -38,6 +38,8 @@ struct Cli {
     riot_ids: Vec<String>,
     #[arg(long, default_value = "false")]
     remove_matches: bool,
+    #[arg(long, default_value = "false")]
+    force: bool,
 }
 
 #[tokio::main]
@@ -57,24 +59,66 @@ pub async fn main() {
     .into_iter()
     .filter_map(|x| x.ok())
     .collect::<HashSet<_>>();
+    let client = redis::Client::open("redis://redis/").expect("Failed to connect to redis");
+    let mut con = client
+        .get_connection()
+        .expect("Failed to get redis connection");
 
     for vod_id in args.vod_ids {
-        process_vod(vod_id.parse().unwrap(), &puuids, args.remove_matches).await;
+        if !args.force {
+            if let Ok(true) = redis::cmd("SISMEMBER")
+                .arg("processed")
+                .arg(vod_id.to_string())
+                .query(&mut con)
+            {
+                debug!("Skipping vod: {:?}", vod_id);
+                continue;
+            }
+        }
+        process_vod(
+            vod_id.parse().unwrap(),
+            &puuids,
+            args.remove_matches,
+            args.force,
+        )
+        .await;
     }
 }
 
-async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bool) {
+async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bool, force: bool) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
         .await
         .expect("Failed to find matches");
+    let client = redis::Client::open("redis://redis/").expect("Failed to connect to redis");
+    let mut con = client
+        .get_connection()
+        .expect("Failed to get redis connection");
 
     for valo_match in matches {
+        let match_id = valo_match.match_info.match_id;
+
+        // check if redis set contains match id
+        if !force {
+            if let Ok(true) = redis::cmd("SISMEMBER")
+                .arg(format!("matches:{}", vod_id))
+                .arg(match_id.to_string())
+                .query(&mut con)
+            {
+                debug!("Skipping match: {:?}", match_id);
+                continue;
+            }
+        }
+
         if process_match(puuids, vod_id, vod_interval, &valo_match, remove_matches)
             .await
-            .is_none()
+            .is_some()
         {
-            error!("Failed to process match");
+            redis::cmd("SADD")
+                .arg(format!("matches:{}", vod_id))
+                .arg(match_id.to_string())
+                .query::<()>(&mut con)
+                .expect("Failed to add match to redis set");
         }
     }
 }

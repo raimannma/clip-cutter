@@ -32,6 +32,8 @@ lazy_static = "1.4.0"
 cached = { version = "0.46.1", features = ["tokio", "async"] }
 dotenv = "0.15.0"
 env_logger = "0.10.1"
+disk-persist = "0.1.0"
 tpe = { git = "https://github.com/raimannma/tpe", version = "0.2.0" }
 ort = "1.16.3"
 filetime_creation = "0.1.6"
+redis = "0.24.0"
