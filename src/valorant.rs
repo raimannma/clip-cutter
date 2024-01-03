@@ -184,9 +184,9 @@ struct WeaponData {
     result = true,
     convert = r#"{ format!("{}", weapon_uuid) }"#
 )]
-pub(crate) fn get_weapon_name(weapon_uuid: Uuid) -> reqwest::Result<String> {
+pub(crate) async fn get_weapon_name(weapon_uuid: Uuid) -> reqwest::Result<String> {
     let url = format!("https://valorant-api.com/v1/weapons/{}", weapon_uuid);
-    let response: APIData<WeaponData> = reqwest::blocking::get(url)?.json()?;
+    let response: APIData<WeaponData> = reqwest::get(url).await?.json().await?;
     Ok(response.data.display_name)
 }
 

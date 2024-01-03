@@ -82,7 +82,7 @@ impl MultiKillEvent {
         format!("{}k", self.kill_events.len())
     }
 
-    fn weapon_postfix(&self) -> Option<String> {
+    async fn weapon_postfix(&self) -> Option<String> {
         get_weapon_name(
             self.kill_events
                 .first()?
@@ -92,6 +92,7 @@ impl MultiKillEvent {
                 .parse()
                 .ok()?,
         )
+        .await
         .ok()
         .map(|w| w.to_lowercase())
     }
@@ -107,7 +108,7 @@ impl MatchEvent for MultiKillEvent {
             self.get_kill_agent(valo_match).await,
             self.get_death_agents(valo_match).await.join("_").into(),
             self.kill_count_postfix().into(),
-            self.weapon_postfix(),
+            self.weapon_postfix().await,
         ]
         .iter()
         .flatten()

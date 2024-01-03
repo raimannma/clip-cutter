@@ -71,7 +71,7 @@ impl KillEvent {
             .and_then(|p| p.character_id)
     }
 
-    fn damage_item_postfix(&self) -> Option<String> {
+    async fn damage_item_postfix(&self) -> Option<String> {
         let damage_item = self.finishing_damage.damage_item.to_lowercase();
         if damage_item.contains("ability") || damage_item.contains("primary") {
             return Some("ability".to_string());
@@ -80,6 +80,7 @@ impl KillEvent {
             return Some("ult".to_string());
         }
         get_weapon_name(damage_item.parse().ok()?)
+            .await
             .ok()
             .map(|w| w.to_lowercase())
     }
@@ -100,7 +101,7 @@ impl MatchEvent for KillEvent {
         [
             self.get_kill_agent(valo_match).await,
             self.get_death_agent(valo_match).await,
-            self.damage_item_postfix(),
+            self.damage_item_postfix().await,
         ]
         .iter()
         .flatten()
