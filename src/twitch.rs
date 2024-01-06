@@ -82,32 +82,44 @@ pub(crate) fn download_vod(
         .status()
     {
         warn!("Twitch-DL failed: {}", e);
-        let download_link = std::process::Command::new("yt-dlp")
-            .arg("--get-url")
-            .arg(format!("https://www.twitch.tv/videos/{}", vod_id))
-            .output()
-            .unwrap()
-            .stdout;
-        let download_link = String::from_utf8(download_link).unwrap();
-        let download_link = download_link.trim();
-        std::process::Command::new("ffmpeg")
-            .arg("-y")
-            .arg("-ss")
-            .arg(format_ffmpeg_time(start, true))
-            .arg("-to")
-            .arg(format_ffmpeg_time(end, true))
-            .arg("-i")
-            .arg(download_link)
-            .arg("-y")
-            .arg("-f")
-            .arg("'b'")
-            .arg("-c")
-            .arg("copy")
-            .arg(out_path)
-            .status()
+        download_with_ytdlp(vod_id, out_path, start, end)
+    } else if !out_path.exists() {
+        warn!("Failed to download VOD: {}", vod_id);
+        download_with_ytdlp(vod_id, out_path, start, end)
     } else {
         Ok(ExitStatus::default())
     }
+}
+
+fn download_with_ytdlp(
+    vod_id: usize,
+    out_path: &Path,
+    start: &Duration,
+    end: &Duration,
+) -> std::io::Result<ExitStatus> {
+    let download_link = std::process::Command::new("yt-dlp")
+        .arg("--get-url")
+        .arg(format!("https://www.twitch.tv/videos/{}", vod_id))
+        .output()
+        .unwrap()
+        .stdout;
+    let download_link = String::from_utf8(download_link).unwrap();
+    let download_link = download_link.trim();
+    std::process::Command::new("ffmpeg")
+        .arg("-y")
+        .arg("-ss")
+        .arg(format_ffmpeg_time(start, true))
+        .arg("-to")
+        .arg(format_ffmpeg_time(end, true))
+        .arg("-i")
+        .arg(download_link)
+        .arg("-y")
+        .arg("-f")
+        .arg("'b'")
+        .arg("-c")
+        .arg("copy")
+        .arg(out_path)
+        .status()
 }
 
 pub fn parse_length(length: &str) -> usize {
