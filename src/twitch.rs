@@ -106,6 +106,8 @@ fn download_with_ytdlp(
 ) -> std::io::Result<ExitStatus> {
     let download_link = std::process::Command::new("yt-dlp")
         .arg("--get-url")
+        .arg("-f")
+        .arg("b")
         .arg(format!("https://www.twitch.tv/videos/{}", vod_id))
         .output()
         .unwrap()
@@ -121,8 +123,6 @@ fn download_with_ytdlp(
         .arg("-i")
         .arg(download_link)
         .arg("-y")
-        .arg("-f")
-        .arg("'b'")
         .arg("-c")
         .arg("copy")
         .arg(out_path)
