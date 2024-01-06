@@ -68,7 +68,23 @@ pub(crate) fn download_vod(
     }
     info!("Saving VOD: {} from {:?} to {:?}", vod_id, start, end);
     std::fs::create_dir_all(out_path.parent().unwrap())?;
-    if let Err(e) = std::process::Command::new("twitch-dl")
+    if let Err(e) = download_with_twitchdl(vod_id, out_path, start, end) {
+        warn!("Twitch-DL failed: {}", e);
+    }
+    if !out_path.exists() {
+        download_with_ytdlp(vod_id, out_path, start, end)
+    } else {
+        Ok(ExitStatus::default())
+    }
+}
+
+fn download_with_twitchdl(
+    vod_id: usize,
+    out_path: &Path,
+    start: &Duration,
+    end: &Duration,
+) -> std::io::Result<ExitStatus> {
+    std::process::Command::new("twitch-dl")
         .arg("download")
         .arg(vod_id.to_string())
         .arg("-q")
@@ -80,15 +96,6 @@ pub(crate) fn download_vod(
         .arg("-o")
         .arg(out_path)
         .status()
-    {
-        warn!("Twitch-DL failed: {}", e);
-        download_with_ytdlp(vod_id, out_path, start, end)
-    } else if !out_path.exists() {
-        warn!("Failed to download VOD: {}", vod_id);
-        download_with_ytdlp(vod_id, out_path, start, end)
-    } else {
-        Ok(ExitStatus::default())
-    }
 }
 
 fn download_with_ytdlp(
