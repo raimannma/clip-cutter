@@ -17,7 +17,6 @@ clean() {
 
 stop() {
   echo "Stopping..."
-  docker-compose down
   docker image rm ghcr.io/raimannma/clip-cutter
   exit 0
 }
