@@ -1,6 +1,6 @@
 use crate::video::format_ffmpeg_time;
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::{debug, info, warn};
 use serde::Deserialize;
 use std::path::Path;
 use std::process::ExitStatus;
@@ -68,7 +68,7 @@ pub(crate) fn download_vod(
     }
     info!("Saving VOD: {} from {:?} to {:?}", vod_id, start, end);
     std::fs::create_dir_all(out_path.parent().unwrap())?;
-    std::process::Command::new("twitch-dl")
+    if let Err(e) = std::process::Command::new("twitch-dl")
         .arg("download")
         .arg(vod_id.to_string())
         .arg("-q")
@@ -80,6 +80,34 @@ pub(crate) fn download_vod(
         .arg("-o")
         .arg(out_path)
         .status()
+    {
+        warn!("Twitch-DL failed: {}", e);
+        let download_link = std::process::Command::new("yt-dlp")
+            .arg("--get-url")
+            .arg(format!("https://www.twitch.tv/videos/{}", vod_id))
+            .output()
+            .unwrap()
+            .stdout;
+        let download_link = String::from_utf8(download_link).unwrap();
+        let download_link = download_link.trim();
+        std::process::Command::new("ffmpeg")
+            .arg("-y")
+            .arg("-ss")
+            .arg(format_ffmpeg_time(start, true))
+            .arg("-to")
+            .arg(format_ffmpeg_time(end, true))
+            .arg("-i")
+            .arg(download_link)
+            .arg("-y")
+            .arg("-f")
+            .arg("'b'")
+            .arg("-c")
+            .arg("copy")
+            .arg(out_path)
+            .status()
+    } else {
+        Ok(ExitStatus::default())
+    }
 }
 
 pub fn parse_length(length: &str) -> usize {
