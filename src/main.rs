@@ -59,21 +59,12 @@ pub async fn main() {
     .into_iter()
     .filter_map(|x| x.ok())
     .collect::<HashSet<_>>();
-    let client = redis::Client::open("redis://redis/").expect("Failed to connect to redis");
-    let mut con = client
-        .get_connection()
-        .expect("Failed to get redis connection");
 
     for vod_id in args.vod_ids {
-        if !args.force {
-            if let Ok(true) = redis::cmd("SISMEMBER")
-                .arg("processed")
-                .arg(vod_id.to_string())
-                .query(&mut con)
-            {
-                debug!("Skipping vod: {:?}", vod_id);
-                continue;
-            }
+        let processed_path = Path::new("/processed").join(vod_id.clone());
+        if !args.force && processed_path.exists() {
+            debug!("Skipping vod: {:?}", vod_id);
+            continue;
         }
         process_vod(
             vod_id.parse().unwrap(),
@@ -82,6 +73,7 @@ pub async fn main() {
             args.force,
         )
         .await;
+        std::fs::write(processed_path, "").unwrap();
     }
 }
 
@@ -90,35 +82,20 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bo
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
         .await
         .expect("Failed to find matches");
-    let client = redis::Client::open("redis://redis/").expect("Failed to connect to redis");
-    let mut con = client
-        .get_connection()
-        .expect("Failed to get redis connection");
 
     for valo_match in matches {
         let match_id = valo_match.match_info.match_id;
-
-        // check if redis set contains match id
-        if !force {
-            if let Ok(true) = redis::cmd("SISMEMBER")
-                .arg(format!("matches:{}", vod_id))
-                .arg(match_id.to_string())
-                .query(&mut con)
-            {
-                debug!("Skipping match: {:?}", match_id);
-                continue;
-            }
+        let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
+        if !force && processed_path.exists() {
+            debug!("Skipping match: {:?}", match_id);
+            continue;
         }
 
         if process_match(puuids, vod_id, vod_interval, &valo_match, remove_matches)
             .await
             .is_some()
         {
-            redis::cmd("SADD")
-                .arg(format!("matches:{}", vod_id))
-                .arg(match_id.to_string())
-                .query::<()>(&mut con)
-                .expect("Failed to add match to redis set");
+            std::fs::write(processed_path, "").unwrap();
         }
     }
 }
