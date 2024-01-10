@@ -61,11 +61,6 @@ pub async fn main() {
     .collect::<HashSet<_>>();
 
     for vod_id in args.vod_ids {
-        let processed_path = Path::new("/processed").join(vod_id.clone());
-        if !args.force && processed_path.exists() {
-            debug!("Skipping vod: {:?}", vod_id);
-            continue;
-        }
         process_vod(
             vod_id.parse().unwrap(),
             &puuids,
@@ -73,7 +68,6 @@ pub async fn main() {
             args.force,
         )
         .await;
-        std::fs::write(processed_path, "").unwrap();
     }
 }
 
