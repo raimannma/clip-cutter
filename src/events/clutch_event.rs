@@ -8,12 +8,12 @@ use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub(crate) struct Clutch {
+pub(crate) struct ClutchEvent {
     pub(crate) clutcher: String,
     pub(crate) kill_events: Vec<KillEvent>,
 }
 
-impl MatchEventBuilder for Clutch {
+impl MatchEventBuilder for ClutchEvent {
     fn build_events(valo_match: &MatchDetailsV1) -> Vec<Box<Self>> {
         let mut clutches = vec![];
         for round in valo_match.round_results.clone().unwrap_or_default() {
@@ -52,7 +52,7 @@ impl MatchEventBuilder for Clutch {
     }
 }
 
-impl Clutch {
+impl ClutchEvent {
     pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
         match valorant::get_agent(valo_match, &self.clutcher) {
             Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
@@ -61,7 +61,7 @@ impl Clutch {
     }
 }
 
-impl MatchEvent for Clutch {
+impl MatchEvent for ClutchEvent {
     fn category(&self, _: &HashSet<String>) -> String {
         "Clutch".to_string()
     }

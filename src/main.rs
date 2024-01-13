@@ -40,6 +40,8 @@ struct Cli {
     remove_matches: bool,
     #[arg(long, default_value = "false")]
     force: bool,
+    #[arg(long, default_value = "false")]
+    category: Option<String>,
 }
 
 #[tokio::main]
@@ -66,12 +68,19 @@ pub async fn main() {
             &puuids,
             args.remove_matches,
             args.force,
+            args.category.clone(),
         )
         .await;
     }
 }
 
-async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bool, force: bool) {
+async fn process_vod(
+    vod_id: usize,
+    puuids: &HashSet<String>,
+    remove_matches: bool,
+    force: bool,
+    category: Option<String>,
+) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
         .await
@@ -85,9 +94,16 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, remove_matches: bo
             continue;
         }
 
-        if process_match(puuids, vod_id, vod_interval, &valo_match, remove_matches)
-            .await
-            .is_some()
+        if process_match(
+            puuids,
+            vod_id,
+            vod_interval,
+            &valo_match,
+            remove_matches,
+            category.clone(),
+        )
+        .await
+        .is_some()
         {
             std::fs::write(processed_path, "").unwrap();
         }
@@ -100,6 +116,7 @@ async fn process_match(
     vod_interval: (OffsetDateTime, OffsetDateTime),
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
+    category: Option<String>,
 ) -> Option<()> {
     let match_video_path =
         Path::new("matches").join(format!("{}.mp4", valo_match.match_info.match_id));
@@ -141,14 +158,15 @@ async fn process_match(
     let offset = Duration::from_millis(offset - 350);
 
     let events = events::build_events(valo_match)
-        .iter()
+        .into_iter()
         .filter(|e| match e {
             Event::Kill(e) => e.is_from_puuids(puuids) || e.is_against_puuids(puuids),
             Event::MultiKill(e) => e.is_from_puuids(puuids),
             Event::Clutch(e) => e.is_from_puuids(puuids),
+            Event::DoubleKill(e) => e.is_from_puuids(puuids),
         })
-        .cloned()
-        .collect::<Vec<_>>();
+        .filter(|e| category.is_none() || e.category(puuids) == category.unwrap())
+        .collect_vec();
     info!("Found {} events", events.len());
 
     let match_date =
