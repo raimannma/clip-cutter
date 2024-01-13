@@ -2,11 +2,11 @@ use crate::events::event::{MatchEvent, MatchEventBuilder};
 use crate::events::kill_event::KillEvent;
 use crate::valorant;
 use crate::valorant::get_weapon_name;
-use futures::StreamExt;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::Duration;
+use tuple_conv::RepeatedTuple;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 const KILL_TIME: u64 = 5;
@@ -18,17 +18,17 @@ pub(crate) struct DoubleKillEvent {
 
 impl MatchEventBuilder for DoubleKillEvent {
     fn build_events(valo_match: &MatchDetailsV1) -> Vec<Box<Self>> {
-        return valo_match
+        valo_match
             .players
-            .into_iter()
-            .map(|p| p.puuid)
+            .iter()
+            .map(|p| p.puuid.clone())
             .flat_map(|player| {
                 valo_match
                     .round_results
+                    .clone()
                     .unwrap_or_default()
-                    .into_iter()
-                    .flat_map(|rr| rr.player_stats)
-                    .into_iter()
+                    .iter()
+                    .flat_map(|rr| rr.player_stats.clone())
                     .flat_map(|ps| ps.kills)
                     .filter(|k| k.killer == *player)
                     .map(KillEvent::from)
@@ -38,13 +38,13 @@ impl MatchEventBuilder for DoubleKillEvent {
                     .map(|k| DoubleKillEvent { kill_events: k })
                     .map(Box::new)
             })
-            .collect_vec();
+            .collect_vec()
     }
 }
 
 impl DoubleKillEvent {
     pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
-        let agent_uuid = valorant::get_agent(valo_match, &self.kill_events[0].killer);
+        let agent_uuid = valorant::get_agent(valo_match, &self.kill_events.0.killer);
         match agent_uuid {
             Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
             None => None,
@@ -54,7 +54,9 @@ impl DoubleKillEvent {
     pub(crate) async fn get_death_agents(&self, valo_match: &MatchDetailsV1) -> Vec<String> {
         futures::future::join_all(
             self.kill_events
-                .iter()
+                .clone()
+                .to_vec()
+                .into_iter()
                 .flat_map(|ke| valorant::get_agent(valo_match, &ke.victim))
                 .map(valorant::get_agent_name),
         )
@@ -64,14 +66,10 @@ impl DoubleKillEvent {
         .collect()
     }
 
-    fn kill_count_postfix(&self) -> String {
-        format!("{}k", self.kill_events.len())
-    }
-
     async fn weapon_postfix(&self) -> Option<String> {
         get_weapon_name(
             self.kill_events
-                .first()?
+                .0
                 .finishing_damage
                 .damage_item
                 .to_lowercase()
@@ -93,7 +91,6 @@ impl MatchEvent for DoubleKillEvent {
         [
             self.get_kill_agent(valo_match).await,
             self.get_death_agents(valo_match).await.join("_").into(),
-            self.kill_count_postfix().into(),
             self.weapon_postfix().await,
         ]
         .iter()
@@ -105,6 +102,8 @@ impl MatchEvent for DoubleKillEvent {
     fn game_time_interval(&self) -> (Duration, Duration) {
         let sorted_events = self
             .kill_events
+            .clone()
+            .to_vec()
             .iter()
             .map(|ke| ke.game_time)
             .sorted()
@@ -113,11 +112,17 @@ impl MatchEvent for DoubleKillEvent {
     }
 
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool {
-        self.kill_events.iter().any(|ke| ke.is_from_puuids(puuids))
+        self.kill_events
+            .clone()
+            .to_vec()
+            .iter()
+            .any(|ke| ke.is_from_puuids(puuids))
     }
 
     fn is_against_puuids(&self, puuids: &HashSet<String>) -> bool {
         self.kill_events
+            .clone()
+            .to_vec()
             .iter()
             .any(|ke| ke.is_against_puuids(puuids))
     }
