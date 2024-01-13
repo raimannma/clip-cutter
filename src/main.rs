@@ -118,6 +118,7 @@ async fn process_match(
     remove_matches: bool,
     category: Option<String>,
 ) -> Option<()> {
+    debug!("Filtering for category: {:?}", category);
     let events = events::build_events(valo_match)
         .into_iter()
         .filter(|e| match e {
