@@ -134,12 +134,6 @@ async fn process_match(
         return None;
     }
 
-    let match_video_path =
-        Path::new("matches").join(format!("{}.mp4", valo_match.match_info.match_id));
-    let (start, end) = video::get_match_interval(vod_interval.0, valo_match);
-    valorant::save_match_video(&match_video_path, vod_id, start, end)
-        .expect("Failed to save video");
-
     let match_kill_events = valorant::get_match_kills(valo_match)
         .iter()
         .filter(|k| puuids.contains(&k.killer))
@@ -152,6 +146,12 @@ async fn process_match(
         error!("No match kill events found");
         return None;
     }
+
+    let match_video_path =
+        Path::new("matches").join(format!("{}.mp4", valo_match.match_info.match_id));
+    let (start, end) = video::get_match_interval(vod_interval.0, valo_match);
+    valorant::save_match_video(&match_video_path, vod_id, start, end)
+        .expect("Failed to save video");
 
     let detected_kill_events = video::detect_kill_events(&match_video_path)
         .iter()
