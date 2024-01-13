@@ -40,7 +40,7 @@ struct Cli {
     remove_matches: bool,
     #[arg(long, default_value = "false")]
     force: bool,
-    #[arg(long, default_value = "false")]
+    #[arg(long)]
     category: Option<String>,
 }
 
@@ -127,11 +127,7 @@ async fn process_match(
             Event::Clutch(e) => e.is_from_puuids(puuids),
             Event::DoubleKill(e) => e.is_from_puuids(puuids),
         })
-        .filter(|e| {
-            category.is_none()
-                || category.clone().unwrap().is_empty()
-                || e.category(puuids) == category.clone().unwrap()
-        })
+        .filter(|e| category.is_none() || e.category(puuids) == category.clone().unwrap())
         .collect_vec();
     info!("Found {} events", events.len());
 
