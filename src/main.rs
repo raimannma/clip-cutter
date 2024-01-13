@@ -118,6 +118,22 @@ async fn process_match(
     remove_matches: bool,
     category: Option<String>,
 ) -> Option<()> {
+    let events = events::build_events(valo_match)
+        .into_iter()
+        .filter(|e| match e {
+            Event::Kill(e) => e.is_from_puuids(puuids) || e.is_against_puuids(puuids),
+            Event::MultiKill(e) => e.is_from_puuids(puuids),
+            Event::Clutch(e) => e.is_from_puuids(puuids),
+            Event::DoubleKill(e) => e.is_from_puuids(puuids),
+        })
+        .filter(|e| category.is_none() || e.category(puuids) == category.clone().unwrap())
+        .collect_vec();
+    info!("Found {} events", events.len());
+
+    if events.is_empty() {
+        return None;
+    }
+
     let match_video_path =
         Path::new("matches").join(format!("{}.mp4", valo_match.match_info.match_id));
     let (start, end) = video::get_match_interval(vod_interval.0, valo_match);
@@ -156,18 +172,6 @@ async fn process_match(
     let offset = offset::get_offset(&detected_kill_events, &match_kill_events)?;
 
     let offset = Duration::from_millis(offset - 350);
-
-    let events = events::build_events(valo_match)
-        .into_iter()
-        .filter(|e| match e {
-            Event::Kill(e) => e.is_from_puuids(puuids) || e.is_against_puuids(puuids),
-            Event::MultiKill(e) => e.is_from_puuids(puuids),
-            Event::Clutch(e) => e.is_from_puuids(puuids),
-            Event::DoubleKill(e) => e.is_from_puuids(puuids),
-        })
-        .filter(|e| category.is_none() || e.category(puuids) == category.clone().unwrap())
-        .collect_vec();
-    info!("Found {} events", events.len());
 
     let match_date =
         OffsetDateTime::from_unix_timestamp(valo_match.match_info.game_start_millis as i64 / 1000)
