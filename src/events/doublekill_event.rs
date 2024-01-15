@@ -9,7 +9,7 @@ use std::time::Duration;
 use tuple_conv::RepeatedTuple;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
-const KILL_TIME: u64 = 5;
+const KILL_TIME: u64 = 2;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub(crate) struct DoubleKillEvent {
@@ -35,6 +35,12 @@ impl MatchEventBuilder for DoubleKillEvent {
                     .sorted_by_key(|ke| ke.game_time)
                     .tuple_windows()
                     .filter(|(k, k2)| k.game_time + Duration::from_secs(KILL_TIME) >= k2.game_time)
+                    .filter(|(k, k2)| {
+                        k.finishing_damage.damage_item == k2.finishing_damage.damage_item
+                    })
+                    .filter(|(k, k2)| {
+                        k.finishing_damage.damage_type == k2.finishing_damage.damage_type
+                    })
                     .map(|k| DoubleKillEvent { kill_events: k })
                     .map(Box::new)
             })
