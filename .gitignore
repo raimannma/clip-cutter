@@ -9,3 +9,5 @@ results/
 /model.p
 venv/
 users.json
+model.onnx
+twitch-dl

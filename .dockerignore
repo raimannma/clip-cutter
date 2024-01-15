@@ -7,3 +7,5 @@ kill-data/
 /clips/
 /model.p
 venv/
+model.onnx
+twitch-dl
