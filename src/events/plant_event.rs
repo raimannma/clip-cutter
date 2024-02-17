@@ -39,7 +39,6 @@ impl MatchEventBuilder for PlantEvent {
             .unwrap_or_default()
             .into_iter()
             .filter(|r| r.bomb_planter.is_some() && r.bomb_defuser.is_none())
-            .filter(|r| r.plant_round_time.is_some() && r.defuse_round_time.is_none())
             .map(Self::from)
             .map(Box::new)
             .collect()
