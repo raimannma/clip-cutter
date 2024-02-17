@@ -55,8 +55,24 @@ impl MatchEvent for DefuseEvent {
         "Defuse".to_string()
     }
 
-    async fn name_postfix(&self, _: &MatchDetailsV1) -> String {
-        format!("{}s", (self.defuse_time - self.plant_time).as_secs())
+    async fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
+        let kills = match_details
+            .round_results
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .flat_map(|r| r.player_stats.clone())
+            .flat_map(|ps| ps.kills)
+            .filter(|k| k.time_since_game_start_millis < self.defuse_time.as_millis() as u64)
+            .filter(|k| k.time_since_game_start_millis > self.plant_time.as_millis() as u64)
+            .filter(|k| k.killer == self.defuser)
+            .count();
+        format!(
+            "{}s_{}k",
+            (self.defuse_time - self.plant_time).as_secs(),
+            kills
+        )
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {

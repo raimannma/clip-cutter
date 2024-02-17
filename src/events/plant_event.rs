@@ -51,12 +51,31 @@ impl MatchEvent for PlantEvent {
         "Plant".to_string()
     }
 
-    async fn name_postfix(&self, _: &MatchDetailsV1) -> String {
-        "plant".to_string()
+    async fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
+        let kills = match_details
+            .round_results
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .flat_map(|r| r.player_stats)
+            .flat_map(|ps| ps.kills)
+            .filter(|k| k.killer == self.planter)
+            .filter(|k| {
+                k.time_since_game_start_millis
+                    > (self.plant_time - Duration::from_secs(4)).as_millis() as u64
+                    && k.time_since_game_start_millis
+                        < (self.plant_time + Duration::from_secs(45)).as_millis() as u64
+            })
+            .count();
+        format!("{}k", kills)
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {
-        (self.plant_time - Duration::from_secs(30), self.plant_time)
+        (
+            self.plant_time - Duration::from_secs(4),
+            self.plant_time + Duration::from_secs(45),
+        )
     }
 
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool {
