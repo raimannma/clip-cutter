@@ -88,18 +88,20 @@ impl KillEvent {
 
 impl MatchEvent for KillEvent {
     async fn category(&self, puuids: &HashSet<String>) -> String {
-        if self.is_from_puuids(puuids) {
-            return if self.damage_item_postfix().await.is_some() {
-                "Kill"
-            } else {
-                "AbilityKill"
-            }
-            .to_string();
+        let is_from = self.is_from_puuids(puuids);
+        let is_against = self.is_against_puuids(puuids);
+        if is_from && is_against {
+            "Death"
+        } else if is_from && self.damage_item_postfix().await.is_some() {
+            "Kill"
+        } else if is_from && self.damage_item_postfix().await.is_none() {
+            "AbilityKill"
+        } else if is_against {
+            "Death"
+        } else {
+            "Other"
         }
-        if self.is_against_puuids(puuids) {
-            return "Death".to_string();
-        }
-        "Other".to_string()
+        .to_string()
     }
 
     async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
