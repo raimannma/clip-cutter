@@ -70,7 +70,7 @@ impl MatchEvent for DefuseEvent {
             .count();
         format!(
             "{}s_{}k",
-            (self.defuse_time.as_secs() as i64 - self.plant_time.as_secs() as i64)
+            (self.defuse_time.as_secs() as i64 - self.plant_time.as_secs() as i64),
             kills
         )
     }
