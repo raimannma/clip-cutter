@@ -60,10 +60,7 @@ impl MatchEvent for DefuseEvent {
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {
-        (
-            self.plant_time - Duration::from_secs(4) - Duration::from_secs(10),
-            self.defuse_time + Duration::from_secs(7) + Duration::from_secs(10),
-        )
+        (self.plant_time - Duration::from_secs(4), self.defuse_time)
     }
 
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool {
