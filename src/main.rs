@@ -131,6 +131,7 @@ async fn process_match(
             Event::Plant(e) => e.is_from_puuids(puuids),
             Event::Defuse(e) => e.is_from_puuids(puuids),
             Event::Ace(e) => e.is_from_puuids(puuids),
+            Event::Retake(e) => e.is_from_puuids(puuids),
         })
         .collect_vec();
 

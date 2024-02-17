@@ -5,6 +5,7 @@ use crate::events::doublekill_event::DoubleKillEvent;
 use crate::events::kill_event::KillEvent;
 use crate::events::multikill_event::MultiKillEvent;
 use crate::events::plant_event::PlantEvent;
+use crate::events::retake_event::RetakeEvent;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -33,6 +34,7 @@ pub(crate) enum Event {
     Plant(PlantEvent),
     Defuse(DefuseEvent),
     Ace(AceEvent),
+    Retake(RetakeEvent),
 }
 
 pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
@@ -65,6 +67,10 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
             .into_iter()
             .map(|e| Event::Ace(*e))
             .collect::<Vec<_>>(),
+        RetakeEvent::build_events(valo_match)
+            .into_iter()
+            .map(|e| Event::Retake(*e))
+            .collect::<Vec<_>>(),
     ]
     .iter()
     .flatten()
@@ -82,6 +88,7 @@ impl MatchEvent for Event {
             Event::Plant(e) => e.category(puuids).await,
             Event::Defuse(e) => e.category(puuids).await,
             Event::Ace(e) => e.category(puuids).await,
+            Event::Retake(e) => e.category(puuids).await,
         }
     }
 
@@ -94,6 +101,7 @@ impl MatchEvent for Event {
             Event::Plant(e) => e.name_postfix(valo_match).await,
             Event::Defuse(e) => e.name_postfix(valo_match).await,
             Event::Ace(e) => e.name_postfix(valo_match).await,
+            Event::Retake(e) => e.name_postfix(valo_match).await,
         }
     }
 
@@ -106,6 +114,7 @@ impl MatchEvent for Event {
             Event::Plant(e) => e.game_time_interval(),
             Event::Defuse(e) => e.game_time_interval(),
             Event::Ace(e) => e.game_time_interval(),
+            Event::Retake(e) => e.game_time_interval(),
         }
     }
 
@@ -118,6 +127,7 @@ impl MatchEvent for Event {
             Event::Plant(e) => e.is_from_puuids(puuids),
             Event::Defuse(e) => e.is_from_puuids(puuids),
             Event::Ace(e) => e.is_from_puuids(puuids),
+            Event::Retake(e) => e.is_from_puuids(puuids),
         }
     }
 
@@ -130,6 +140,7 @@ impl MatchEvent for Event {
             Event::Plant(e) => e.is_against_puuids(puuids),
             Event::Defuse(e) => e.is_against_puuids(puuids),
             Event::Ace(e) => e.is_against_puuids(puuids),
+            Event::Retake(e) => e.is_against_puuids(puuids),
         }
     }
 }
