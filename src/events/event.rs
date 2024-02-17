@@ -1,7 +1,9 @@
 use crate::events::clutch_event::ClutchEvent;
+use crate::events::defuse_event::DefuseEvent;
 use crate::events::doublekill_event::DoubleKillEvent;
 use crate::events::kill_event::KillEvent;
 use crate::events::multikill_event::MultiKillEvent;
+use crate::events::plant_event::PlantEvent;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fmt::Debug;
@@ -27,6 +29,8 @@ pub(crate) enum Event {
     MultiKill(MultiKillEvent),
     Clutch(ClutchEvent),
     DoubleKill(DoubleKillEvent),
+    Plant(PlantEvent),
+    Defuse(DefuseEvent),
 }
 
 pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
@@ -47,6 +51,14 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
             .into_iter()
             .map(|e| Event::DoubleKill(*e))
             .collect::<Vec<_>>(),
+        PlantEvent::build_events(valo_match)
+            .into_iter()
+            .map(|e| Event::Plant(*e))
+            .collect::<Vec<_>>(),
+        DefuseEvent::build_events(valo_match)
+            .into_iter()
+            .map(|e| Event::Defuse(*e))
+            .collect::<Vec<_>>(),
     ]
     .iter()
     .flatten()
@@ -61,6 +73,8 @@ impl MatchEvent for Event {
             Event::MultiKill(e) => e.category(puuids),
             Event::Clutch(e) => e.category(puuids),
             Event::DoubleKill(e) => e.category(puuids),
+            Event::Plant(e) => e.category(puuids),
+            Event::Defuse(e) => e.category(puuids),
         }
     }
 
@@ -70,6 +84,8 @@ impl MatchEvent for Event {
             Event::MultiKill(e) => e.name_postfix(valo_match).await,
             Event::Clutch(e) => e.name_postfix(valo_match).await,
             Event::DoubleKill(e) => e.name_postfix(valo_match).await,
+            Event::Plant(e) => e.name_postfix(valo_match).await,
+            Event::Defuse(e) => e.name_postfix(valo_match).await,
         }
     }
 
@@ -79,6 +95,8 @@ impl MatchEvent for Event {
             Event::MultiKill(e) => e.game_time_interval(),
             Event::Clutch(e) => e.game_time_interval(),
             Event::DoubleKill(e) => e.game_time_interval(),
+            Event::Plant(e) => e.game_time_interval(),
+            Event::Defuse(e) => e.game_time_interval(),
         }
     }
 
@@ -88,6 +106,8 @@ impl MatchEvent for Event {
             Event::MultiKill(e) => e.is_from_puuids(puuids),
             Event::Clutch(e) => e.is_from_puuids(puuids),
             Event::DoubleKill(e) => e.is_from_puuids(puuids),
+            Event::Plant(e) => e.is_from_puuids(puuids),
+            Event::Defuse(e) => e.is_from_puuids(puuids),
         }
     }
 
@@ -97,6 +117,8 @@ impl MatchEvent for Event {
             Event::MultiKill(e) => e.is_against_puuids(puuids),
             Event::Clutch(e) => e.is_against_puuids(puuids),
             Event::DoubleKill(e) => e.is_against_puuids(puuids),
+            Event::Plant(e) => e.is_against_puuids(puuids),
+            Event::Defuse(e) => e.is_against_puuids(puuids),
         }
     }
 }

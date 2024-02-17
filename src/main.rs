@@ -41,7 +41,7 @@ struct Cli {
     #[arg(long, default_value = "false")]
     force: bool,
     #[arg(long)]
-    category: Option<String>,
+    category: Option<Vec<String>>,
 }
 
 #[tokio::main]
@@ -79,7 +79,7 @@ async fn process_vod(
     puuids: &HashSet<String>,
     remove_matches: bool,
     force: bool,
-    category: Option<String>,
+    category: Option<Vec<String>>,
 ) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
@@ -88,6 +88,7 @@ async fn process_vod(
 
     for valo_match in matches {
         let match_id = valo_match.match_info.match_id;
+
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
         if !force && processed_path.exists() {
             debug!("Skipping match: {:?}", match_id);
@@ -105,6 +106,7 @@ async fn process_vod(
         .await
         .is_some()
         {
+            std::fs::create_dir_all(processed_path.parent().unwrap()).ok();
             std::fs::write(processed_path, "").unwrap();
         }
     }
@@ -116,7 +118,7 @@ async fn process_match(
     vod_interval: (OffsetDateTime, OffsetDateTime),
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
-    category: Option<String>,
+    category: Option<Vec<String>>,
 ) -> Option<()> {
     debug!("Filtering for category: {:?}", category);
     let events = events::build_events(valo_match)
@@ -126,8 +128,17 @@ async fn process_match(
             Event::MultiKill(e) => e.is_from_puuids(puuids),
             Event::Clutch(e) => e.is_from_puuids(puuids),
             Event::DoubleKill(e) => e.is_from_puuids(puuids),
+            Event::Plant(e) => e.is_from_puuids(puuids),
+            Event::Defuse(e) => e.is_from_puuids(puuids),
         })
-        .filter(|e| category.is_none() || e.category(puuids) == category.clone().unwrap())
+        .filter(|e| {
+            category.is_none()
+                || category
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .contains(&e.category(puuids))
+        })
         .collect_vec();
     info!("Found {} events", events.len());
 
