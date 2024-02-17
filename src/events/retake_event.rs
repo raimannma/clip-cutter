@@ -73,8 +73,8 @@ impl MatchEventBuilder for RetakeEvent {
             .map(|p| (p.puuid, p.team_id))
             .collect::<HashMap<_, _>>();
         for round in valo_match.round_results.clone().unwrap_or_default() {
-            if round.plant_round_time.is_none()
-                || round.defuse_round_time.is_none()
+            if round.bomb_planter.is_none()
+                || round.bomb_defuser.is_none()
                 || round.plant_round_time == round.defuse_round_time
             {
                 continue;
@@ -94,6 +94,7 @@ impl MatchEventBuilder for RetakeEvent {
                 .filter(|k| !is_attacker(round.round_num, teams.get(&k.victim).unwrap()))
                 .count();
             if attacker_deaths_before_plant <= 1 && defender_deaths_before_plant <= 1 {
+                println!("Round: {:?}", round.round_num);
                 retake_events.push(Box::new(RetakeEvent::new(valo_match, &round)));
             }
         }
