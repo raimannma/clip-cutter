@@ -107,7 +107,10 @@ impl MatchEvent for RetakeEvent {
     }
 
     async fn name_postfix(&self, _: &MatchDetailsV1) -> String {
-        format!("{}s", (self.defuse_time - self.plant_time).as_secs())
+        format!(
+            "{}s",
+            (self.defuse_time.as_secs() as i64 - self.plant_time.as_secs() as i64)
+        )
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {
