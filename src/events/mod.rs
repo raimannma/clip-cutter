@@ -1,3 +1,4 @@
+pub(crate) mod ace_event;
 pub(crate) mod clutch_event;
 pub(crate) mod defuse_event;
 pub(crate) mod doublekill_event;

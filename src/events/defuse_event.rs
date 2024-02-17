@@ -51,7 +51,7 @@ impl MatchEventBuilder for DefuseEvent {
 }
 
 impl MatchEvent for DefuseEvent {
-    fn category(&self, _: &HashSet<String>) -> String {
+    async fn category(&self, _: &HashSet<String>) -> String {
         "Defuse".to_string()
     }
 

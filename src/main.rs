@@ -130,16 +130,23 @@ async fn process_match(
             Event::DoubleKill(e) => e.is_from_puuids(puuids),
             Event::Plant(e) => e.is_from_puuids(puuids),
             Event::Defuse(e) => e.is_from_puuids(puuids),
-        })
-        .filter(|e| {
-            category.is_none()
-                || category
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .contains(&e.category(puuids))
+            Event::Ace(e) => e.is_from_puuids(puuids),
         })
         .collect_vec();
+
+    let mut filtered_events = vec![];
+    for event in events {
+        if category.is_none()
+            || category
+                .as_ref()
+                .unwrap()
+                .contains(&event.category(puuids).await)
+        {
+            filtered_events.push(event);
+        }
+    }
+    let events = filtered_events;
+
     info!("Found {} events", events.len());
 
     if events.is_empty() {
@@ -198,7 +205,7 @@ async fn process_match(
         .map_or("other".to_string(), |q| q.to_string());
 
     for event in tqdm!(events.iter(), desc = "Saving clips", total = events.len()) {
-        let category = event.category(puuids);
+        let category = event.category(puuids).await;
         let name_postfix = event
             .name_postfix(valo_match)
             .await

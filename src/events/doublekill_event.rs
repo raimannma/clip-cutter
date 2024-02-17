@@ -89,7 +89,7 @@ impl DoubleKillEvent {
 }
 
 impl MatchEvent for DoubleKillEvent {
-    fn category(&self, _: &HashSet<String>) -> String {
+    async fn category(&self, _: &HashSet<String>) -> String {
         "Doublekill".to_string()
     }
 

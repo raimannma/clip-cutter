@@ -47,7 +47,7 @@ impl MatchEventBuilder for PlantEvent {
 }
 
 impl MatchEvent for PlantEvent {
-    fn category(&self, _: &HashSet<String>) -> String {
+    async fn category(&self, _: &HashSet<String>) -> String {
         "Plant".to_string()
     }
 

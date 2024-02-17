@@ -73,11 +73,11 @@ impl KillEvent {
 
     async fn damage_item_postfix(&self) -> Option<String> {
         let damage_item = self.finishing_damage.damage_item.to_lowercase();
-        if damage_item.contains("ability") || damage_item.contains("primary") {
-            return Some("ability".to_string());
-        }
-        if damage_item.contains("ultimate") {
-            return Some("ult".to_string());
+        if damage_item.contains("ability")
+            || damage_item.contains("primary")
+            || damage_item.contains("ultimate")
+        {
+            return None;
         }
         get_weapon_name(damage_item.parse().ok()?)
             .await
@@ -87,9 +87,14 @@ impl KillEvent {
 }
 
 impl MatchEvent for KillEvent {
-    fn category(&self, puuids: &HashSet<String>) -> String {
+    async fn category(&self, puuids: &HashSet<String>) -> String {
         if self.is_from_puuids(puuids) {
-            return "Kill".to_string();
+            return if self.damage_item_postfix().await.is_some() {
+                "Kill"
+            } else {
+                "AbilityKill"
+            }
+            .to_string();
         }
         if self.is_against_puuids(puuids) {
             return "Death".to_string();

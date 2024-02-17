@@ -4,59 +4,54 @@ use crate::valorant;
 use crate::valorant::get_weapon_name;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub(crate) struct MultiKillEvent {
+pub(crate) struct AceEvent {
     pub(crate) kill_events: Vec<KillEvent>,
 }
 
-impl MatchEventBuilder for MultiKillEvent {
+impl MatchEventBuilder for AceEvent {
     fn build_events(valo_match: &MatchDetailsV1) -> Vec<Box<Self>> {
-        let mut multikills = vec![];
-        let puuids = valo_match
+        let teams = valo_match
             .players
-            .iter()
-            .map(|p| p.puuid.clone())
-            .collect::<Vec<_>>();
-        for round in valo_match.round_results.clone().unwrap_or_default() {
-            for player in puuids.iter() {
-                let mut current_group = vec![];
-                let kills = round
-                    .clone()
-                    .player_stats
-                    .iter()
-                    .cloned()
-                    .flat_map(|ps| ps.kills)
-                    .map(KillEvent::from)
-                    .sorted_by_key(|ke| ke.game_time)
-                    .collect::<Vec<_>>();
-                for kill in kills {
-                    if kill.victim == *player {
-                        if current_group.len() > 2 {
-                            multikills.push(Box::new(Self {
-                                kill_events: current_group.clone(),
-                            }));
-                        }
-                        current_group.clear();
-                    } else if kill.killer == *player {
-                        current_group.push(kill);
-                    }
-                }
-                if current_group.len() > 2 {
-                    multikills.push(Box::new(Self {
-                        kill_events: current_group.clone(),
-                    }));
-                }
-            }
-        }
-        multikills
+            .clone()
+            .into_iter()
+            .map(|p| (p.puuid, p.team_id))
+            .collect::<HashMap<_, _>>();
+        valo_match
+            .round_results
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|round| round.round_ceremony == "CeremonyAce")
+            .filter_map(|r| {
+                r.player_stats
+                    .into_iter()
+                    .filter(|ps| ps.kills.len() >= 5)
+                    .find(|ps| {
+                        teams
+                            .get(&ps.puuid)
+                            .map(|t| t == &r.winning_team)
+                            .unwrap_or(false)
+                    })
+                    .map(|ps| AceEvent {
+                        kill_events: ps
+                            .kills
+                            .into_iter()
+                            .map(KillEvent::from)
+                            .sorted_by_key(|ke| ke.game_time)
+                            .collect_vec(),
+                    })
+                    .map(Box::new)
+            })
+            .collect_vec()
     }
 }
 
-impl MultiKillEvent {
+impl AceEvent {
     pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
         let agent_uuid = valorant::get_agent(valo_match, &self.kill_events[0].killer);
         match agent_uuid {
@@ -98,9 +93,9 @@ impl MultiKillEvent {
     }
 }
 
-impl MatchEvent for MultiKillEvent {
+impl MatchEvent for AceEvent {
     async fn category(&self, _: &HashSet<String>) -> String {
-        "Multikill".to_string()
+        "Ace".to_string()
     }
 
     async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {

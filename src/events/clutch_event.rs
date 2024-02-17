@@ -62,7 +62,7 @@ impl ClutchEvent {
 }
 
 impl MatchEvent for ClutchEvent {
-    fn category(&self, _: &HashSet<String>) -> String {
+    async fn category(&self, _: &HashSet<String>) -> String {
         "Clutch".to_string()
     }
 

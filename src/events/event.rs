@@ -1,3 +1,4 @@
+use crate::events::ace_event::AceEvent;
 use crate::events::clutch_event::ClutchEvent;
 use crate::events::defuse_event::DefuseEvent;
 use crate::events::doublekill_event::DoubleKillEvent;
@@ -11,7 +12,7 @@ use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 pub(crate) trait MatchEvent: Debug + Clone + Serialize {
-    fn category(&self, puuids: &HashSet<String>) -> String;
+    async fn category(&self, puuids: &HashSet<String>) -> String;
     async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String;
     fn game_time_interval(&self) -> (Duration, Duration);
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool;
@@ -31,6 +32,7 @@ pub(crate) enum Event {
     DoubleKill(DoubleKillEvent),
     Plant(PlantEvent),
     Defuse(DefuseEvent),
+    Ace(AceEvent),
 }
 
 pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
@@ -59,6 +61,10 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
             .into_iter()
             .map(|e| Event::Defuse(*e))
             .collect::<Vec<_>>(),
+        AceEvent::build_events(valo_match)
+            .into_iter()
+            .map(|e| Event::Ace(*e))
+            .collect::<Vec<_>>(),
     ]
     .iter()
     .flatten()
@@ -67,14 +73,15 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
 }
 
 impl MatchEvent for Event {
-    fn category(&self, puuids: &HashSet<String>) -> String {
+    async fn category(&self, puuids: &HashSet<String>) -> String {
         match self {
-            Event::Kill(e) => e.category(puuids),
-            Event::MultiKill(e) => e.category(puuids),
-            Event::Clutch(e) => e.category(puuids),
-            Event::DoubleKill(e) => e.category(puuids),
-            Event::Plant(e) => e.category(puuids),
-            Event::Defuse(e) => e.category(puuids),
+            Event::Kill(e) => e.category(puuids).await,
+            Event::MultiKill(e) => e.category(puuids).await,
+            Event::Clutch(e) => e.category(puuids).await,
+            Event::DoubleKill(e) => e.category(puuids).await,
+            Event::Plant(e) => e.category(puuids).await,
+            Event::Defuse(e) => e.category(puuids).await,
+            Event::Ace(e) => e.category(puuids).await,
         }
     }
 
@@ -86,6 +93,7 @@ impl MatchEvent for Event {
             Event::DoubleKill(e) => e.name_postfix(valo_match).await,
             Event::Plant(e) => e.name_postfix(valo_match).await,
             Event::Defuse(e) => e.name_postfix(valo_match).await,
+            Event::Ace(e) => e.name_postfix(valo_match).await,
         }
     }
 
@@ -97,6 +105,7 @@ impl MatchEvent for Event {
             Event::DoubleKill(e) => e.game_time_interval(),
             Event::Plant(e) => e.game_time_interval(),
             Event::Defuse(e) => e.game_time_interval(),
+            Event::Ace(e) => e.game_time_interval(),
         }
     }
 
@@ -108,6 +117,7 @@ impl MatchEvent for Event {
             Event::DoubleKill(e) => e.is_from_puuids(puuids),
             Event::Plant(e) => e.is_from_puuids(puuids),
             Event::Defuse(e) => e.is_from_puuids(puuids),
+            Event::Ace(e) => e.is_from_puuids(puuids),
         }
     }
 
@@ -119,6 +129,7 @@ impl MatchEvent for Event {
             Event::DoubleKill(e) => e.is_against_puuids(puuids),
             Event::Plant(e) => e.is_against_puuids(puuids),
             Event::Defuse(e) => e.is_against_puuids(puuids),
+            Event::Ace(e) => e.is_against_puuids(puuids),
         }
     }
 }
