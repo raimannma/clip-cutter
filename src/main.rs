@@ -248,7 +248,7 @@ async fn process_match(
     }
 
     if remove_matches {
-        std::fs::remove_file(match_video_path).unwrap();
+        std::fs::remove_file(match_video_path).ok();
     }
     Some(())
 }
