@@ -4,7 +4,7 @@ use crate::valorant;
 use crate::valorant::get_weapon_name;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
@@ -15,38 +15,23 @@ pub(crate) struct AceEvent {
 
 impl MatchEventBuilder for AceEvent {
     fn build_events(valo_match: &MatchDetailsV1) -> Vec<Box<Self>> {
-        let teams = valo_match
-            .players
-            .clone()
-            .into_iter()
-            .map(|p| (p.puuid, p.team_id))
-            .collect::<HashMap<_, _>>();
         valo_match
             .round_results
             .clone()
             .unwrap_or_default()
             .into_iter()
             .filter(|round| round.round_ceremony == "CeremonyAce")
-            .filter_map(|r| {
-                r.player_stats
+            .flat_map(|r| r.player_stats)
+            .filter(|ps| ps.kills.len() >= 5)
+            .map(|ps| AceEvent {
+                kill_events: ps
+                    .kills
                     .into_iter()
-                    .filter(|ps| ps.kills.len() >= 5)
-                    .find(|ps| {
-                        teams
-                            .get(&ps.puuid)
-                            .map(|t| t == &r.winning_team)
-                            .unwrap_or(false)
-                    })
-                    .map(|ps| AceEvent {
-                        kill_events: ps
-                            .kills
-                            .into_iter()
-                            .map(KillEvent::from)
-                            .sorted_by_key(|ke| ke.game_time)
-                            .collect_vec(),
-                    })
-                    .map(Box::new)
+                    .map(KillEvent::from)
+                    .sorted_by_key(|ke| ke.game_time)
+                    .collect_vec(),
             })
+            .map(Box::new)
             .collect_vec()
     }
 }
