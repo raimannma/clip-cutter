@@ -22,7 +22,7 @@ const VIDEO_ANALYSIS_RATE: usize = 6;
 lazy_static! {
     static ref ORT_ENVIRONMENT: Arc<Environment> = Environment::builder()
         .with_name("clip-cutter")
-        .with_log_level(LoggingLevel::Verbose)
+        .with_log_level(LoggingLevel::Error)
         .build()
         .expect("Could not create environment")
         .into_arc();
