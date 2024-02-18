@@ -42,14 +42,9 @@ def preprocess_img(img_path):
     if img.shape == (1080, 1920, 3):
         img = img[750:950, 860:1060]
         imsave(img_path, img)
-    if img.shape != (200, 200, 3):
-        img = resize(img, (200, 200))
-    else:
-        img = img / 255.0
     img = resize(img, (50, 50))
-    if img.shape != (50, 50, 3):
-        print(img_path)
-        return None
+    if (img > 1).any() or (img < 0).any():
+        img = img / 255.0
     return img.flatten()
 
 
@@ -109,7 +104,7 @@ def infer():
 
 def export():
     model = pickle.load(open("./model.p", "rb"))
-    initial_type = [("float_input", FloatTensorType([None, 50 * 50 * 3]))]
+    initial_type = [("float_input", FloatTensorType([1, 50 * 50 * 3]))]
     onnx = convert_sklearn(model, initial_types=initial_type, target_opset=18, model_optim=True)
     sequence_outputs = (o for o in onnx.graph.output if o.type.WhichOneof("value") == "sequence_type")
     for o in sequence_outputs:
