@@ -1,18 +1,16 @@
+import os
+import pickle
 import shutil
 import time
 from functools import lru_cache
 
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType
-import os
-import pickle
-
+import numpy as np
 from skimage.io import imread, imsave
 from skimage.transform import resize
-import numpy as np
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import classification_report
 from sklearn.svm import SVC
 from tqdm import tqdm
 
@@ -34,9 +32,9 @@ def train():
     report = classification_report(y_test, y_prediction)
     print(report)
 
-    print(f'{score * 100:.2f}% of samples were correctly classified')
+    print(f"{score * 100:.2f}% of samples were correctly classified")
 
-    pickle.dump(classifier, open('./model.p', 'wb'))
+    pickle.dump(classifier, open("./model.p", "wb"))
 
 
 def preprocess_img(img_path):
@@ -47,7 +45,7 @@ def preprocess_img(img_path):
     if img.shape != (200, 200, 3):
         img = resize(img, (200, 200))
     else:
-        img = img / 255.
+        img = img / 255.0
     img = resize(img, (50, 50))
     if img.shape != (50, 50, 3):
         print(img_path)
@@ -57,8 +55,8 @@ def preprocess_img(img_path):
 
 @lru_cache()
 def load_dataset():
-    input_dir = 'kill-data'
-    categories = ['no_kill', 'kill']
+    input_dir = "kill-data"
+    categories = ["no_kill", "kill"]
     data = []
     labels = []
     for category_idx, category in enumerate(categories):
@@ -75,22 +73,22 @@ def load_dataset():
 
 def benchmark():
     X, y = load_dataset()
-    model = pickle.load(open('./model.p', 'rb'))
+    model = pickle.load(open("./model.p", "rb"))
     times = []
     # warmup
     for img in X[:10]:
         model.predict([img])
-    for img in tqdm(X[:1000], desc='Benchmarking'):
+    for img in tqdm(X[:1000], desc="Benchmarking"):
         start = time.time()
         model.predict([img])
         end = time.time()
         times.append(end - start)
 
-    print(f'Average inference time: {np.mean(times) * 1000:.2f}ms')
+    print(f"Average inference time: {np.mean(times) * 1000:.2f}ms")
 
 
 def infer():
-    model = pickle.load(open('./model.p', 'rb'))
+    model = pickle.load(open("./model.p", "rb"))
 
     # base_dir = "kill-data/kill"
     # for file in tqdm(os.listdir(base_dir)):
@@ -110,17 +108,17 @@ def infer():
 
 
 def export():
-    model = pickle.load(open('./model.p', 'rb'))
-    initial_type = [('float_input', FloatTensorType([None, 50 * 50 * 3]))]
+    model = pickle.load(open("./model.p", "rb"))
+    initial_type = [("float_input", FloatTensorType([None, 50 * 50 * 3]))]
     onnx = convert_sklearn(model, initial_types=initial_type, target_opset=18, model_optim=True)
-    sequence_outputs = (o for o in onnx.graph.output if o.type.WhichOneof('value') == 'sequence_type')
+    sequence_outputs = (o for o in onnx.graph.output if o.type.WhichOneof("value") == "sequence_type")
     for o in sequence_outputs:
         onnx.graph.output.remove(o)
     with open("model.onnx", "wb") as f:
         f.write(onnx.SerializeToString())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     train()
     benchmark()
     # infer()
