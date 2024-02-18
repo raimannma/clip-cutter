@@ -17,10 +17,8 @@ use log::{debug, error, info};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::path::Path;
-use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use time::{format_description, OffsetDateTime};
-use uuid::Uuid;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 lazy_static! {
@@ -94,10 +92,6 @@ async fn process_vod(
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
         if !force && processed_path.exists() {
             debug!("Skipping match: {:?}", match_id);
-            continue;
-        }
-
-        if match_id != Uuid::from_str("cc45d358-27d2-48b0-9719-11861dafb05f").unwrap() {
             continue;
         }
 
