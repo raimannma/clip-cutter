@@ -94,7 +94,6 @@ impl MatchEventBuilder for RetakeEvent {
                 .filter(|k| !is_attacker(round.round_num, teams.get(&k.victim).unwrap()))
                 .count();
             if attacker_deaths_before_plant <= 1 && defender_deaths_before_plant <= 1 {
-                println!("Round: {:?}", round.round_num);
                 retake_events.push(Box::new(RetakeEvent::new(valo_match, &round)));
             }
         }
