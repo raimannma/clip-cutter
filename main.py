@@ -17,12 +17,9 @@ from tqdm import tqdm
 
 def train():
     X, y = load_dataset()
-    no_kills = np.sum(y == 0)
-    kills = np.sum(y == 1)
-    train_size = int(0.9 * min(no_kills, kills))
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, shuffle=True)
 
-    classifier = SVC(verbose=True, tol=1e-6, max_iter=10000)
+    classifier = SVC(verbose=True, tol=1e-6, max_iter=10000, class_weight="balanced")
 
     classifier.fit(X_train, y_train)
 
