@@ -16,6 +16,7 @@ pub(crate) struct KillEvent {
     pub(crate) killer: String,
     pub(crate) victim: String,
     pub(crate) finishing_damage: KillFinishingDamage,
+    pub(crate) shots: Option<(u32, u32, u32)>,
 }
 
 impl From<PlayerRoundKill> for KillEvent {
@@ -25,13 +26,27 @@ impl From<PlayerRoundKill> for KillEvent {
             killer: kill.killer,
             victim: kill.victim,
             finishing_damage: kill.finishing_damage,
+            shots: None,
+        }
+    }
+}
+
+impl From<(PlayerRoundKill, u32, u32, u32)> for KillEvent {
+    fn from(kill: (PlayerRoundKill, u32, u32, u32)) -> Self {
+        let (kill, headshots, bodyshots, legshots) = kill;
+        Self {
+            game_time: Duration::from_millis(kill.time_since_game_start_millis),
+            killer: kill.killer,
+            victim: kill.victim,
+            finishing_damage: kill.finishing_damage,
+            shots: Some((headshots, bodyshots, legshots)),
         }
     }
 }
 
 impl MatchEventBuilder for KillEvent {
     fn build_events(valo_match: &MatchDetailsV1) -> Vec<Box<Self>> {
-        valo_match
+        let player_stats = valo_match
             .round_results
             .as_ref()
             .cloned()
@@ -39,10 +54,23 @@ impl MatchEventBuilder for KillEvent {
             .iter()
             .cloned()
             .flat_map(|r| r.player_stats)
-            .flat_map(|ps| ps.kills)
-            .map(Self::from)
-            .map(Box::new)
-            .collect()
+            .collect_vec();
+        let mut events = vec![];
+        for ps in player_stats {
+            for kill in ps.kills {
+                let (headshots, bodyshots, legshots) = ps
+                    .damage
+                    .iter()
+                    .filter(|d| d.receiver == kill.victim)
+                    .fold((0, 0, 0), |(h, b, l), d| {
+                        (h + d.headshots, b + d.bodyshots, l + d.legshots)
+                    });
+                events.push(Box::new(KillEvent::from((
+                    kill, headshots, bodyshots, legshots,
+                ))));
+            }
+        }
+        events
     }
 }
 
@@ -93,7 +121,15 @@ impl MatchEvent for KillEvent {
         if is_from && is_against {
             "Death"
         } else if is_from && self.damage_item_postfix().await.is_some() {
-            "Kill"
+            if let Some((headshots, bodyshots, legshots)) = self.shots {
+                if headshots == 1 && bodyshots == 0 && legshots == 0 {
+                    "Onetap"
+                } else {
+                    "Kill"
+                }
+            } else {
+                "Kill"
+            }
         } else if is_from && self.damage_item_postfix().await.is_none() {
             "AbilityKill"
         } else if is_against {
