@@ -19,6 +19,7 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use time::{format_description, OffsetDateTime};
+use valorant_api_official::enums::queue::Queue;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 lazy_static! {
@@ -189,7 +190,12 @@ async fn process_match(
         return None;
     }
 
-    let offset = offset::get_offset(&detected_kill_events, &match_kill_events)?;
+    let min_offset = match valo_match.match_info.queue_id.unwrap_or(Queue::COMPETITIVE) {
+        Queue::DEATHMATCH => 0,
+        _ => 40000,
+    };
+
+    let offset = offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)?;
 
     let offset = Duration::from_millis(offset - 350);
 

@@ -5,7 +5,11 @@ use rand::prelude::StdRng;
 use rand::SeedableRng;
 use std::time::Duration;
 
-pub(crate) fn get_offset(offsets1: &[Duration], offsets2: &[Duration]) -> Option<u64> {
+pub(crate) fn get_offset(
+    offsets1: &[Duration],
+    offsets2: &[Duration],
+    min_offset: u64,
+) -> Option<u64> {
     debug!("Finding best offset from {:?} to {:?}", offsets1, offsets2);
     let offsets1 = offsets1
         .iter()
@@ -16,10 +20,14 @@ pub(crate) fn get_offset(offsets1: &[Duration], offsets2: &[Duration]) -> Option
         .map(|x| x.as_millis() as u32)
         .collect::<Vec<_>>();
 
-    find_best_offset_semi_statistically(&offsets1, &offsets2)
+    find_best_offset_semi_statistically(&offsets1, &offsets2, min_offset)
 }
 
-fn find_best_offset_semi_statistically(offsets1: &[u32], offsets2: &[u32]) -> Option<u64> {
+fn find_best_offset_semi_statistically(
+    offsets1: &[u32],
+    offsets2: &[u32],
+    min_offset: u64,
+) -> Option<u64> {
     let mut removers = vec![];
     let max = if offsets1.len() > offsets2.len() {
         offsets1.len() - offsets2.len()
@@ -70,7 +78,8 @@ fn find_best_offset_semi_statistically(offsets1: &[u32], offsets2: &[u32]) -> Op
             .filter(|(i, _)| !remove_values2.contains(i))
             .map(|(_, x)| *x)
             .collect::<Vec<_>>();
-        let offset = match find_best_offset_statistically(&tmp_offsets1, &tmp_offsets2) {
+        let offset = match find_best_offset_statistically(&tmp_offsets1, &tmp_offsets2, min_offset)
+        {
             Some(o) => o,
             None => continue,
         };
@@ -91,13 +100,18 @@ fn find_best_offset_semi_statistically(offsets1: &[u32], offsets2: &[u32]) -> Op
     best_offset
 }
 
-fn find_best_offset_statistically(offsets1: &[u32], offsets2: &[u32]) -> Option<(u64, u64)> {
+fn find_best_offset_statistically(
+    offsets1: &[u32],
+    offsets2: &[u32],
+    min_offset: u64,
+) -> Option<(u64, u64)> {
     offsets1
         .iter()
         .cartesian_product(offsets2.iter())
         .map(|(o1, o2)| *o1 as i32 - *o2 as i32)
         .map(|o| o as u64)
         .filter(|offset| *offset < 250000)
+        .filter(|offset| *offset > min_offset)
         .filter_map(|offset| get_error(offset, offsets1, offsets2).map(|error| (offset, error)))
         .min_by_key(|(_, error)| *error)
         .and_then(|(offset, error)| (error < 100).then_some((offset, error)))
