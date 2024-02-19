@@ -17,7 +17,7 @@ use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 const VIDEO_MATCH_SPLIT_THRESHOLD: u64 = 2 * 60 * 1000;
 
-const VIDEO_ANALYSIS_RATE: usize = 6;
+const VIDEO_ANALYSIS_RATE: usize = 3;
 
 lazy_static! {
     static ref ORT_ENVIRONMENT: Arc<Environment> = Environment::builder()
@@ -188,7 +188,7 @@ pub(crate) fn detect_kill_events(path: &Path) -> Vec<Duration> {
             first_stamp = first_stamp.or(Some(frame.timestamp));
             num_consecutive_detections += 1;
 
-            if num_consecutive_detections > 0 {
+            if num_consecutive_detections > 1 {
                 debug!("Found kill event");
                 kills.push(Duration::from_secs_f32(first_stamp.unwrap()));
                 first_stamp = None;
