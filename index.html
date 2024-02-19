@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clip Cutter</title>
+
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <style>
+        div#filters {
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
+        }
+
+        div.grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-gap: 10px;
+            width: 90vw;
+            margin: 0 auto;
+        }
+
+        div#clips-container div {
+            border: 2px solid black;
+            border-radius: 5px;
+            padding: 5px;
+
+            video {
+                height: auto;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="filters">
+    <div class="filter">
+        <label for="gamemode-filter">Gamemode:</label>
+        <select id="gamemode-filter">
+            <option value="">All Gamemodes</option>
+        </select>
+    </div>
+    <div class="filter">
+        <label for="category-filter">Category:</label>
+        <select id="category-filter">
+            <option value="">All Categories</option>
+        </select>
+    </div>
+    <div class="filter">
+        <label for="agent-filter">Agent:</label>
+        <select id="agent-filter">
+            <option value="">All Agents</option>
+        </select>
+    </div>
+    <div class="filter">
+        <label for="weapon-filter">Weapon:</label>
+        <select id="weapon-filter">
+            <option value="">All Weapons</option>
+        </select>
+    </div>
+</div>
+
+<div id="clips-container" class="grid"></div>
+
+<script type="text/javascript">
+    const clipsContainer = document.getElementById("clips-container");
+    const gamemodeFilter = document.getElementById("gamemode-filter");
+    const categoryFilter = document.getElementById("category-filter");
+    const agentFilter = document.getElementById("agent-filter");
+    const weaponFilter = document.getElementById("weapon-filter");
+    const weapons = ["Odin", "Ares", "Vandal", "Bulldog", "Phantom", "Judge", "Bucky", "Frenzy", "Classic", "Ghost", "Sheriff", "Shorty", "Operator", "Guardian", "Outlaw", "Marshal", "Spectre", "Stinger", "Melee"];
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    for (const weapon of weapons) {
+        let option = document.createElement("option");
+        option.value = weapon;
+        option.textContent = weapon;
+        option.selected = weapon === urlParams.get("weapon");
+        weaponFilter.appendChild(option);
+    }
+
+    function pauseOthers(video) {
+        let videos = document.getElementsByTagName("video");
+        for (let i = 0; i < videos.length; i++) {
+            if (videos[i] !== video) {
+                videos[i].pause();
+            }
+        }
+    }
+
+    const streamerName = urlParams.get("name");
+    (async () => {
+        const gamemodes = await fetch(`/gamemodes/${streamerName}`).then(response => response.json());
+        for (const gamemode of gamemodes) {
+            let option = document.createElement("option");
+            option.value = gamemode;
+            option.textContent = gamemode;
+            option.selected = gamemode === urlParams.get("gamemode");
+            gamemodeFilter.appendChild(option);
+        }
+
+        let categories = {};
+        for (const gamemode of gamemodes) {
+            categories[gamemode] = await fetch(`/categories/${streamerName}/${gamemode}`).then(response => response.json());
+        }
+        for (const category of categories[gamemodes[0]]) {
+            let option = document.createElement("option");
+            option.value = category;
+            option.textContent = category;
+            option.selected = category === urlParams.get("category");
+            categoryFilter.appendChild(option);
+        }
+
+        let clips = {};
+        let agents = new Set();
+        for (const gamemode of gamemodes) {
+            clips[gamemode] = {};
+            for (const category of categories[gamemode]) {
+                clips[gamemode][category] = await fetch(`/clips/${streamerName}/${gamemode}/${category}`).then(response => response.json());
+                for (const clip of clips[gamemode][category]) {
+                    let name = clip.agent_name;
+                    if (agents.has(name) || name[0] >= '0' && name[0] <= '9') continue;
+                    agents.add(name);
+                }
+            }
+        }
+        for (const agent of agents) {
+            let option = document.createElement("option");
+            option.value = agent;
+            option.textContent = agent;
+            option.selected = agent === urlParams.get("agent");
+            agentFilter.appendChild(option);
+        }
+
+        async function updateClips() {
+            clipsContainer.innerHTML = "";
+            for (const gamemode of gamemodes) {
+                if (gamemodeFilter.value && gamemodeFilter.value !== gamemode) continue;
+                for (const category of categories[gamemode]) {
+                    if (categoryFilter.value && categoryFilter.value !== category) continue;
+                    for (const clip of clips[gamemode][category]) {
+                        if (agentFilter.value && agentFilter.value !== clip.agent_name) continue;
+                        if (weaponFilter.value && !clip.args.includes(weaponFilter.value.toLowerCase())) continue;
+                        let thumbnailUrl = `/clips/${streamerName}/${clip.gamemode}/${clip.category}/${clip.file_name}/thumbnail`;
+                        let videoUrl = `/clips/${streamerName}/${clip.gamemode}/${clip.category}/${clip.file_name}/video`;
+                        let clipElement = document.createElement("div");
+                        clipElement.classList.add("clip");
+                        clipElement.innerHTML = `<video onplay="pauseOthers(this)" preload="none" poster="${thumbnailUrl}" controls><source src="${videoUrl}" type="video/mp4"></video>`;
+                        clipElement.innerHTML += `<b>File Name:</b> ${clip.file_name}<br>`;
+                        clipElement.innerHTML += `<b>Game Mode:</b> ${clip.gamemode}<br>`;
+                        clipElement.innerHTML += `<b>Category:</b> ${clip.category}<br>`;
+                        clipElement.innerHTML += `<b>Labels:</b> ${clip.args.join(", ")}<br>`;
+                        clipElement.innerHTML += `<b>Time:</b> ${new Date(clip.timestamp * 1000).toLocaleString()}<br>`;
+                        clipsContainer.appendChild(clipElement);
+                    }
+                }
+            }
+        }
+
+        gamemodeFilter.onchange = async () => {
+            urlParams.set("gamemode", gamemodeFilter.value);
+            history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+            await updateClips();
+        };
+        categoryFilter.onchange = async () => {
+            urlParams.set("category", categoryFilter.value);
+            history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+            await updateClips();
+        };
+        agentFilter.onchange = async () => {
+            urlParams.set("agent", agentFilter.value);
+            history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+            await updateClips();
+        };
+        weaponFilter.onchange = async () => {
+            urlParams.set("weapon", weaponFilter.value);
+            history.pushState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+            await updateClips();
+        };
+        await updateClips();
+    })();
+</script>
+</body>
+</html>
