@@ -90,9 +90,8 @@ impl MatchEvent for AceEvent {
             self.kill_count_postfix().into(),
             self.weapon_postfix().await,
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 

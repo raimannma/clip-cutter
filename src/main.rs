@@ -69,7 +69,7 @@ pub async fn main() {
             &puuids,
             args.remove_matches,
             args.force,
-            args.category.clone(),
+            &args.category,
         )
         .await;
     }
@@ -80,7 +80,7 @@ async fn process_vod(
     puuids: &HashSet<String>,
     remove_matches: bool,
     force: bool,
-    category: Option<Vec<String>>,
+    category: &Option<Vec<String>>,
 ) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
@@ -102,7 +102,7 @@ async fn process_vod(
             vod_interval,
             &valo_match,
             remove_matches,
-            category.clone(),
+            category,
         )
         .await
         .is_some()
@@ -119,7 +119,7 @@ async fn process_match(
     vod_interval: (OffsetDateTime, OffsetDateTime),
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
-    category: Option<Vec<String>>,
+    category: &Option<Vec<String>>,
 ) -> Option<()> {
     debug!("Filtering for category: {:?}", category);
     let events = events::build_events(valo_match)
@@ -138,13 +138,10 @@ async fn process_match(
 
     let mut filtered_events = vec![];
     for event in events {
-        if category.is_none()
-            || category
-                .as_ref()
-                .unwrap()
-                .contains(&event.category(puuids).await)
-        {
-            filtered_events.push(event);
+        if let Some(category) = category.as_ref() {
+            if category.contains(&event.category(puuids).await) {
+                filtered_events.push(event);
+            }
         }
     }
     let events = filtered_events;
@@ -175,8 +172,7 @@ async fn process_match(
         .expect("Failed to save video");
 
     let detected_kill_events = video::detect_kill_events(&match_video_path)
-        .iter()
-        .cloned()
+        .into_iter()
         .sorted()
         .collect::<Vec<_>>();
 

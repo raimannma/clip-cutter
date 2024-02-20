@@ -51,8 +51,7 @@ impl MatchEventBuilder for KillEvent {
             .as_ref()
             .cloned()
             .unwrap_or_default()
-            .iter()
-            .cloned()
+            .into_iter()
             .flat_map(|r| r.player_stats)
             .collect_vec();
         let mut events = vec![];
@@ -146,9 +145,8 @@ impl MatchEvent for KillEvent {
             self.get_death_agent(valo_match).await,
             self.damage_item_postfix().await,
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 

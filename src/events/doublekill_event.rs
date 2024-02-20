@@ -27,8 +27,8 @@ impl MatchEventBuilder for DoubleKillEvent {
                     .round_results
                     .clone()
                     .unwrap_or_default()
-                    .iter()
-                    .flat_map(|rr| rr.player_stats.clone())
+                    .into_iter()
+                    .flat_map(|rr| rr.player_stats)
                     .flat_map(|ps| ps.kills)
                     .filter(|k| k.killer == *player)
                     .map(KillEvent::from)
@@ -99,9 +99,8 @@ impl MatchEvent for DoubleKillEvent {
             self.get_death_agents(valo_match).await.join("_").into(),
             self.weapon_postfix().await,
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 

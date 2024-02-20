@@ -55,8 +55,8 @@ impl RetakeEvent {
             .sum::<u64>()
             / kills.len() as u64;
         Self {
-            winners: winners.iter().map(|p| p.puuid.clone()).collect(),
-            losers: losers.iter().map(|p| p.puuid.clone()).collect(),
+            winners: winners.into_iter().map(|p| p.puuid.clone()).collect(),
+            losers: losers.into_iter().map(|p| p.puuid.clone()).collect(),
             plant_time: Duration::from_millis(round_start_time + round.plant_round_time.unwrap()),
             defuse_time: Duration::from_millis(round_start_time + round.defuse_round_time.unwrap()),
         }

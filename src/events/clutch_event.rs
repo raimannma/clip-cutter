@@ -22,8 +22,7 @@ impl MatchEventBuilder for ClutchEvent {
             }
             let kill_events = round
                 .player_stats
-                .iter()
-                .cloned()
+                .into_iter()
                 .flat_map(|ps| ps.kills)
                 .map(KillEvent::from)
                 .sorted_by_key(|ke| ke.game_time)

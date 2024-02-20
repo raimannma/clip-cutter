@@ -142,8 +142,7 @@ pub(crate) fn get_match_kills(valo_match: &MatchDetailsV1) -> Vec<PlayerRoundKil
         .round_results
         .clone()
         .unwrap_or_default()
-        .iter()
-        .cloned()
+        .into_iter()
         .flat_map(|r| r.player_stats)
         .flat_map(|p| p.kills)
         .collect()
@@ -208,9 +207,8 @@ pub(crate) async fn get_map_name(map_url: &str) -> reqwest::Result<Option<String
     let response: APIData<Vec<MapData>> = reqwest::get(url).await?.json().await?;
     Ok(response
         .data
-        .iter()
+        .into_iter()
         .find(|m| m.map_url == map_url)
-        .cloned()
         .map(|m| m.display_name))
 }
 

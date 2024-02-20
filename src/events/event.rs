@@ -72,9 +72,8 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
             .map(|e| Event::Retake(*e))
             .collect::<Vec<_>>(),
     ]
-    .iter()
+    .into_iter()
     .flatten()
-    .cloned()
     .collect()
 }
 

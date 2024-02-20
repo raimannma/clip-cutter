@@ -27,8 +27,7 @@ impl MatchEventBuilder for MultiKillEvent {
                 let kills = round
                     .clone()
                     .player_stats
-                    .iter()
-                    .cloned()
+                    .into_iter()
                     .flat_map(|ps| ps.kills)
                     .map(KillEvent::from)
                     .sorted_by_key(|ke| ke.game_time)
@@ -110,9 +109,8 @@ impl MatchEvent for MultiKillEvent {
             self.kill_count_postfix().into(),
             self.weapon_postfix().await,
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 
