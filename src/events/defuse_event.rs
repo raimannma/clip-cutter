@@ -50,18 +50,18 @@ impl MatchEventBuilder for DefuseEvent {
 }
 
 impl MatchEvent for DefuseEvent {
-    async fn category(&self, _: &HashSet<String>) -> String {
+    fn category(&self, _: &HashSet<String>) -> String {
         "Defuse".to_string()
     }
 
-    async fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
         let kills = match_details
             .round_results
             .as_ref()
             .cloned()
             .unwrap_or_default()
-            .iter()
-            .flat_map(|r| r.player_stats.clone())
+            .into_iter()
+            .flat_map(|r| r.player_stats)
             .flat_map(|ps| ps.kills)
             .filter(|k| k.time_since_game_start_millis < self.defuse_time.as_millis() as u64)
             .filter(|k| k.time_since_game_start_millis > self.plant_time.as_millis() as u64)

@@ -5,7 +5,6 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::Duration;
-use uuid::Uuid;
 use valorant_api_official::response_types::matchdetails_v1::{
     KillFinishingDamage, MatchDetailsV1, PlayerRoundKill,
 };
@@ -51,8 +50,7 @@ impl MatchEventBuilder for KillEvent {
             .as_ref()
             .cloned()
             .unwrap_or_default()
-            .iter()
-            .cloned()
+            .into_iter()
             .flat_map(|r| r.player_stats)
             .collect_vec();
         let mut events = vec![];
@@ -75,31 +73,17 @@ impl MatchEventBuilder for KillEvent {
 }
 
 impl KillEvent {
-    pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
-        let agent_uuid = self.get_agent_uuid(valo_match, &self.killer);
-        match agent_uuid {
-            Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
-            None => None,
-        }
+    pub(crate) fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
+        valorant::get_agent(valo_match, &self.killer)
+            .and_then(|uuid| valorant::get_agent_name(uuid).ok())
     }
 
-    pub(crate) async fn get_death_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
-        let agent_uuid = self.get_agent_uuid(valo_match, &self.victim);
-        match agent_uuid {
-            Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
-            None => None,
-        }
+    pub(crate) fn get_death_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
+        valorant::get_agent(valo_match, &self.victim)
+            .and_then(|uuid| valorant::get_agent_name(uuid).ok())
     }
 
-    fn get_agent_uuid(&self, valo_match: &MatchDetailsV1, puuid: &str) -> Option<Uuid> {
-        valo_match
-            .players
-            .iter()
-            .find(|p| p.puuid == puuid)
-            .and_then(|p| p.character_id)
-    }
-
-    async fn damage_item_postfix(&self) -> Option<String> {
+    fn damage_item_postfix(&self) -> Option<String> {
         let damage_item = self.finishing_damage.damage_item.to_lowercase();
         if damage_item.contains("ability")
             || damage_item.contains("primary")
@@ -108,19 +92,18 @@ impl KillEvent {
             return None;
         }
         get_weapon_name(damage_item.parse().ok()?)
-            .await
             .ok()
             .map(|w| w.to_lowercase())
     }
 }
 
 impl MatchEvent for KillEvent {
-    async fn category(&self, puuids: &HashSet<String>) -> String {
+    fn category(&self, puuids: &HashSet<String>) -> String {
         let is_from = self.is_from_puuids(puuids);
         let is_against = self.is_against_puuids(puuids);
         if is_from && is_against {
             "Death"
-        } else if is_from && self.damage_item_postfix().await.is_some() {
+        } else if is_from && self.damage_item_postfix().is_some() {
             if let Some((headshots, bodyshots, legshots)) = self.shots {
                 if headshots == 1 && bodyshots == 0 && legshots == 0 {
                     "Onetap"
@@ -130,7 +113,7 @@ impl MatchEvent for KillEvent {
             } else {
                 "Kill"
             }
-        } else if is_from && self.damage_item_postfix().await.is_none() {
+        } else if is_from && self.damage_item_postfix().is_none() {
             "AbilityKill"
         } else if is_against {
             "Death"
@@ -140,15 +123,14 @@ impl MatchEvent for KillEvent {
         .to_string()
     }
 
-    async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
         [
-            self.get_kill_agent(valo_match).await,
-            self.get_death_agent(valo_match).await,
-            self.damage_item_postfix().await,
+            self.get_kill_agent(valo_match),
+            self.get_death_agent(valo_match),
+            self.damage_item_postfix(),
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 

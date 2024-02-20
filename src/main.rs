@@ -82,7 +82,7 @@ async fn process_vod(
     force: bool,
     category: Option<Vec<String>>,
 ) {
-    let vod_interval = twitch::get_vod_start_end(vod_id).await;
+    let vod_interval = twitch::get_vod_start_end(vod_id);
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
         .await
         .expect("Failed to find matches");
@@ -102,9 +102,8 @@ async fn process_vod(
             vod_interval,
             &valo_match,
             remove_matches,
-            category.clone(),
+            &category,
         )
-        .await
         .is_some()
         {
             std::fs::create_dir_all(processed_path.parent().unwrap()).ok();
@@ -113,13 +112,13 @@ async fn process_vod(
     }
 }
 
-async fn process_match(
+fn process_match(
     puuids: &HashSet<String>,
     vod_id: usize,
     vod_interval: (OffsetDateTime, OffsetDateTime),
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
-    category: Option<Vec<String>>,
+    category: &Option<Vec<String>>,
 ) -> Option<()> {
     debug!("Filtering for category: {:?}", category);
     let events = events::build_events(valo_match)
@@ -138,13 +137,10 @@ async fn process_match(
 
     let mut filtered_events = vec![];
     for event in events {
-        if category.is_none()
-            || category
-                .as_ref()
-                .unwrap()
-                .contains(&event.category(puuids).await)
-        {
-            filtered_events.push(event);
+        if let Some(category) = category.as_ref() {
+            if category.contains(&event.category(puuids)) {
+                filtered_events.push(event);
+            }
         }
     }
     let events = filtered_events;
@@ -175,8 +171,7 @@ async fn process_match(
         .expect("Failed to save video");
 
     let detected_kill_events = video::detect_kill_events(&match_video_path)
-        .iter()
-        .cloned()
+        .into_iter()
         .sorted()
         .collect::<Vec<_>>();
 
@@ -203,7 +198,6 @@ async fn process_match(
         OffsetDateTime::from_unix_timestamp(valo_match.match_info.game_start_millis as i64 / 1000)
             .ok()?;
     let map_name = valorant::get_map_name(&valo_match.match_info.map_id)
-        .await
         .expect("Failed to get map name")
         .expect("Failed to get map name");
     let game_mode = &valo_match
@@ -212,11 +206,8 @@ async fn process_match(
         .map_or("other".to_string(), |q| q.to_string());
 
     for event in tqdm!(events.iter(), desc = "Saving clips", total = events.len()) {
-        let category = event.category(puuids).await;
-        let name_postfix = event
-            .name_postfix(valo_match)
-            .await
-            .replace([' ', '/'], "_");
+        let category = event.category(puuids);
+        let name_postfix = event.name_postfix(valo_match).replace([' ', '/'], "_");
 
         let (start, end) = event.game_time_interval();
         let event_date = (match_date + start).format(&CLIP_DATE_TIME_PREFIX).unwrap();

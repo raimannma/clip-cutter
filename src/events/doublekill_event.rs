@@ -27,8 +27,8 @@ impl MatchEventBuilder for DoubleKillEvent {
                     .round_results
                     .clone()
                     .unwrap_or_default()
-                    .iter()
-                    .flat_map(|rr| rr.player_stats.clone())
+                    .into_iter()
+                    .flat_map(|rr| rr.player_stats)
                     .flat_map(|ps| ps.kills)
                     .filter(|k| k.killer == *player)
                     .map(KillEvent::from)
@@ -49,59 +49,48 @@ impl MatchEventBuilder for DoubleKillEvent {
 }
 
 impl DoubleKillEvent {
-    pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
-        let agent_uuid = valorant::get_agent(valo_match, &self.kill_events.0.killer);
-        match agent_uuid {
-            Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
-            None => None,
-        }
+    pub(crate) fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
+        valorant::get_agent(valo_match, &self.kill_events.0.killer)
+            .and_then(|uuid| valorant::get_agent_name(uuid).ok())
     }
 
-    pub(crate) async fn get_death_agents(&self, valo_match: &MatchDetailsV1) -> Vec<String> {
-        futures::future::join_all(
-            self.kill_events
-                .clone()
-                .to_vec()
-                .into_iter()
-                .flat_map(|ke| valorant::get_agent(valo_match, &ke.victim))
-                .map(valorant::get_agent_name),
-        )
-        .await
-        .iter()
-        .filter_map(|r| r.as_ref().ok().cloned())
-        .collect()
+    pub(crate) fn get_death_agents(&self, valo_match: &MatchDetailsV1) -> Vec<String> {
+        self.kill_events
+            .clone()
+            .to_vec()
+            .into_iter()
+            .flat_map(|ke| valorant::get_agent(valo_match, &ke.victim))
+            .map(valorant::get_agent_name)
+            .filter_map(|r| r.as_ref().ok().cloned())
+            .collect()
     }
 
-    async fn weapon_postfix(&self) -> Option<String> {
-        get_weapon_name(
-            self.kill_events
-                .0
-                .finishing_damage
-                .damage_item
-                .to_lowercase()
-                .parse()
-                .ok()?,
-        )
-        .await
-        .ok()
-        .map(|w| w.to_lowercase())
+    fn weapon_postfix(&self) -> Option<String> {
+        self.kill_events
+            .0
+            .finishing_damage
+            .damage_item
+            .to_lowercase()
+            .parse()
+            .ok()
+            .and_then(|uuid| get_weapon_name(uuid).ok())
+            .map(|w| w.to_lowercase())
     }
 }
 
 impl MatchEvent for DoubleKillEvent {
-    async fn category(&self, _: &HashSet<String>) -> String {
+    fn category(&self, _: &HashSet<String>) -> String {
         "Doublekill".to_string()
     }
 
-    async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
         [
-            self.get_kill_agent(valo_match).await,
-            self.get_death_agents(valo_match).await.join("_").into(),
-            self.weapon_postfix().await,
+            self.get_kill_agent(valo_match),
+            self.get_death_agents(valo_match).join("_").into(),
+            self.weapon_postfix(),
         ]
-        .iter()
+        .into_iter()
         .flatten()
-        .cloned()
         .join("_")
     }
 

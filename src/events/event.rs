@@ -13,8 +13,8 @@ use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 pub(crate) trait MatchEvent: Debug + Clone + Serialize {
-    async fn category(&self, puuids: &HashSet<String>) -> String;
-    async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String;
+    fn category(&self, puuids: &HashSet<String>) -> String;
+    fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String;
     fn game_time_interval(&self) -> (Duration, Duration);
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool;
     fn is_against_puuids(&self, puuids: &HashSet<String>) -> bool;
@@ -72,36 +72,35 @@ pub(crate) fn build_events(valo_match: &MatchDetailsV1) -> Vec<Event> {
             .map(|e| Event::Retake(*e))
             .collect::<Vec<_>>(),
     ]
-    .iter()
+    .into_iter()
     .flatten()
-    .cloned()
     .collect()
 }
 
 impl MatchEvent for Event {
-    async fn category(&self, puuids: &HashSet<String>) -> String {
+    fn category(&self, puuids: &HashSet<String>) -> String {
         match self {
-            Event::Kill(e) => e.category(puuids).await,
-            Event::MultiKill(e) => e.category(puuids).await,
-            Event::Clutch(e) => e.category(puuids).await,
-            Event::DoubleKill(e) => e.category(puuids).await,
-            Event::Plant(e) => e.category(puuids).await,
-            Event::Defuse(e) => e.category(puuids).await,
-            Event::Ace(e) => e.category(puuids).await,
-            Event::Retake(e) => e.category(puuids).await,
+            Event::Kill(e) => e.category(puuids),
+            Event::MultiKill(e) => e.category(puuids),
+            Event::Clutch(e) => e.category(puuids),
+            Event::DoubleKill(e) => e.category(puuids),
+            Event::Plant(e) => e.category(puuids),
+            Event::Defuse(e) => e.category(puuids),
+            Event::Ace(e) => e.category(puuids),
+            Event::Retake(e) => e.category(puuids),
         }
     }
 
-    async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
         match self {
-            Event::Kill(e) => e.name_postfix(valo_match).await,
-            Event::MultiKill(e) => e.name_postfix(valo_match).await,
-            Event::Clutch(e) => e.name_postfix(valo_match).await,
-            Event::DoubleKill(e) => e.name_postfix(valo_match).await,
-            Event::Plant(e) => e.name_postfix(valo_match).await,
-            Event::Defuse(e) => e.name_postfix(valo_match).await,
-            Event::Ace(e) => e.name_postfix(valo_match).await,
-            Event::Retake(e) => e.name_postfix(valo_match).await,
+            Event::Kill(e) => e.name_postfix(valo_match),
+            Event::MultiKill(e) => e.name_postfix(valo_match),
+            Event::Clutch(e) => e.name_postfix(valo_match),
+            Event::DoubleKill(e) => e.name_postfix(valo_match),
+            Event::Plant(e) => e.name_postfix(valo_match),
+            Event::Defuse(e) => e.name_postfix(valo_match),
+            Event::Ace(e) => e.name_postfix(valo_match),
+            Event::Retake(e) => e.name_postfix(valo_match),
         }
     }
 

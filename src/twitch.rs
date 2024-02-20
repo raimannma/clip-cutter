@@ -28,17 +28,15 @@ struct TwitchVideo {
     duration: String,
 }
 
-pub async fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime) {
-    let client = reqwest::Client::new();
+pub fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime) {
+    let client = reqwest::blocking::Client::new();
     let response: ApiData<Vec<TwitchVideo>> = client
         .get(format!("https://api.twitch.tv/helix/videos?id={}", vod_id))
         .header("Client-ID", TWITCH_CLIENT_ID.as_str())
         .bearer_auth(TWITCH_ACCESS_TOKEN.as_str())
         .send()
-        .await
         .unwrap()
         .json()
-        .await
         .unwrap();
 
     let twitch_video = response

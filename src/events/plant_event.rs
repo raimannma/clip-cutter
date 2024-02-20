@@ -46,11 +46,11 @@ impl MatchEventBuilder for PlantEvent {
 }
 
 impl MatchEvent for PlantEvent {
-    async fn category(&self, _: &HashSet<String>) -> String {
+    fn category(&self, _: &HashSet<String>) -> String {
         "Plant".to_string()
     }
 
-    async fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, match_details: &MatchDetailsV1) -> String {
         let kills = match_details
             .round_results
             .as_ref()

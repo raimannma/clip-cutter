@@ -102,11 +102,11 @@ impl MatchEventBuilder for RetakeEvent {
 }
 
 impl MatchEvent for RetakeEvent {
-    async fn category(&self, _: &HashSet<String>) -> String {
+    fn category(&self, _: &HashSet<String>) -> String {
         "Retake".to_string()
     }
 
-    async fn name_postfix(&self, _: &MatchDetailsV1) -> String {
+    fn name_postfix(&self, _: &MatchDetailsV1) -> String {
         format!(
             "{}s",
             (self.defuse_time.as_secs() as i64 - self.plant_time.as_secs() as i64)
