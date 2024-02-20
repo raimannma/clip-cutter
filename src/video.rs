@@ -125,6 +125,7 @@ pub(crate) fn format_ffmpeg_time(time: &Duration, with_millis: bool) -> String {
 
 pub(crate) fn detect_kill_events(path: &Path) -> Vec<Duration> {
     let mut process = FfmpegCommand::new()
+        .hwaccel("auto")
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
         .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
