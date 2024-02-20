@@ -142,6 +142,8 @@ async fn process_match(
             if category.contains(&event.category(puuids).await) {
                 filtered_events.push(event);
             }
+        } else {
+            filtered_events.push(event);
         }
     }
     let events = filtered_events;
