@@ -22,7 +22,8 @@ impl MatchEventBuilder for ClutchEvent {
             }
             let kill_events = round
                 .player_stats
-                .into_iter()
+                .iter()
+                .cloned()
                 .flat_map(|ps| ps.kills)
                 .map(KillEvent::from)
                 .sorted_by_key(|ke| ke.game_time)
@@ -52,19 +53,21 @@ impl MatchEventBuilder for ClutchEvent {
 }
 
 impl ClutchEvent {
-    pub(crate) fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
-        valorant::get_agent(valo_match, &self.clutcher)
-            .and_then(|uuid| valorant::get_agent_name(uuid).ok())
+    pub(crate) async fn get_kill_agent(&self, valo_match: &MatchDetailsV1) -> Option<String> {
+        match valorant::get_agent(valo_match, &self.clutcher) {
+            Some(agent_uuid) => valorant::get_agent_name(agent_uuid).await.ok(),
+            None => None,
+        }
     }
 }
 
 impl MatchEvent for ClutchEvent {
-    fn category(&self, _: &HashSet<String>) -> String {
+    async fn category(&self, _: &HashSet<String>) -> String {
         "Clutch".to_string()
     }
 
-    fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
-        self.get_kill_agent(valo_match).iter().join("_")
+    async fn name_postfix(&self, valo_match: &MatchDetailsV1) -> String {
+        self.get_kill_agent(valo_match).await.iter().join("_")
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {

@@ -142,7 +142,8 @@ pub(crate) fn get_match_kills(valo_match: &MatchDetailsV1) -> Vec<PlayerRoundKil
         .round_results
         .clone()
         .unwrap_or_default()
-        .into_iter()
+        .iter()
+        .cloned()
         .flat_map(|r| r.player_stats)
         .flat_map(|p| p.kills)
         .collect()
@@ -165,12 +166,10 @@ struct AgentData {
     result = true,
     convert = r#"{ format!("{}", agent_uuid) }"#
 )]
-pub(crate) fn get_agent_name(agent_uuid: Uuid) -> reqwest::Result<String> {
+pub(crate) async fn get_agent_name(agent_uuid: Uuid) -> reqwest::Result<String> {
     let url = format!("https://valorant-api.com/v1/agents/{}", agent_uuid);
-    Ok(reqwest::blocking::get(url)?
-        .json::<APIData<AgentData>>()?
-        .data
-        .display_name)
+    let response: APIData<AgentData> = reqwest::get(url).await?.json().await?;
+    Ok(response.data.display_name)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -185,12 +184,10 @@ struct WeaponData {
     result = true,
     convert = r#"{ format!("{}", weapon_uuid) }"#
 )]
-pub(crate) fn get_weapon_name(weapon_uuid: Uuid) -> reqwest::Result<String> {
+pub(crate) async fn get_weapon_name(weapon_uuid: Uuid) -> reqwest::Result<String> {
     let url = format!("https://valorant-api.com/v1/weapons/{}", weapon_uuid);
-    Ok(reqwest::blocking::get(url)?
-        .json::<APIData<WeaponData>>()?
-        .data
-        .display_name)
+    let response: APIData<WeaponData> = reqwest::get(url).await?.json().await?;
+    Ok(response.data.display_name)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -206,13 +203,14 @@ struct MapData {
     result = true,
     convert = r#"{ format!("{}", map_url) }"#
 )]
-pub(crate) fn get_map_name(map_url: &str) -> reqwest::Result<Option<String>> {
+pub(crate) async fn get_map_name(map_url: &str) -> reqwest::Result<Option<String>> {
     let url = "https://valorant-api.com/v1/maps";
-    Ok(reqwest::blocking::get(url)?
-        .json::<APIData<Vec<MapData>>>()?
+    let response: APIData<Vec<MapData>> = reqwest::get(url).await?.json().await?;
+    Ok(response
         .data
-        .into_iter()
+        .iter()
         .find(|m| m.map_url == map_url)
+        .cloned()
         .map(|m| m.display_name))
 }
 
