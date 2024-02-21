@@ -121,14 +121,21 @@ impl MatchEvent for KillEvent {
             "Death"
         } else if is_from && self.damage_item_postfix().await.is_some() {
             if let Some((headshots, bodyshots, legshots)) = self.shots {
-                if headshots == 1 && bodyshots == 0 && legshots == 0 {
-                    "Onetap"
-                } else {
-                    "Kill"
+                let is_sniper = [
+                    "a03b24d3-4319-996d-0f8c-94bbfba1dfc7",
+                    "5f0aaf7a-4289-3998-d5ff-eb9a5cf7ef5c",
+                    "c4883e50-4494-202c-3ec3-6b8a9284f00b",
+                ]
+                .contains(&self.finishing_damage.damage_item.as_str());
+                let is_secondary = self.finishing_damage.is_secondary_fire_mode;
+                if headshots + bodyshots + legshots == 1 && is_sniper && is_secondary {
+                    return "NoScopeSniper".to_string();
                 }
-            } else {
-                "Kill"
+                if headshots == 1 && bodyshots == 0 && legshots == 0 {
+                    return "Onetap".to_string();
+                }
             }
+            return "Kill".to_string();
         } else if is_from && self.damage_item_postfix().await.is_none() {
             "AbilityKill"
         } else if is_against {
