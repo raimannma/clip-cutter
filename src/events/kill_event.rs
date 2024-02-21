@@ -126,7 +126,7 @@ impl MatchEvent for KillEvent {
                     "5f0aaf7a-4289-3998-d5ff-eb9a5cf7ef5c",
                     "c4883e50-4494-202c-3ec3-6b8a9284f00b",
                 ]
-                .contains(&self.finishing_damage.damage_item.as_str());
+                .contains(&self.finishing_damage.damage_item.to_lowercase().as_str());
                 let is_secondary = self.finishing_damage.is_secondary_fire_mode;
                 if headshots + bodyshots + legshots == 1 && is_sniper && !is_secondary {
                     return "NoScopeSniper".to_string();
