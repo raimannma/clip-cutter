@@ -54,6 +54,7 @@ pub(crate) struct Metadata {
     pub(crate) description: String,
     pub(crate) genre: String,
 }
+
 impl IntoIterator for Metadata {
     type Item = (String, String);
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -189,7 +190,7 @@ pub(crate) fn detect_kill_events(path: &Path) -> Vec<Duration> {
             first_stamp = first_stamp.or(Some(frame.timestamp));
             num_consecutive_detections += 1;
 
-            if num_consecutive_detections > 0 {
+            if num_consecutive_detections > 1 {
                 debug!("Found kill event");
                 kills.push(Duration::from_secs_f32(first_stamp.unwrap()));
                 first_stamp = None;
