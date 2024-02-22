@@ -11,6 +11,7 @@ use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 pub(crate) struct ClutchEvent {
     pub(crate) clutcher: String,
     pub(crate) kill_events: Vec<KillEvent>,
+    pub(crate) defuse_time: Option<Duration>,
 }
 
 impl MatchEventBuilder for ClutchEvent {
@@ -20,6 +21,16 @@ impl MatchEventBuilder for ClutchEvent {
             if round.round_ceremony != "CeremonyClutch" {
                 continue;
             }
+            let kills = round
+                .player_stats
+                .iter()
+                .flat_map(|ps| ps.kills.iter())
+                .collect_vec();
+            let round_start_time = kills
+                .iter()
+                .map(|k| k.time_since_game_start_millis - k.time_since_round_start_millis)
+                .sum::<u64>()
+                / kills.len() as u64;
             let kill_events = round
                 .player_stats
                 .into_iter()
@@ -42,9 +53,13 @@ impl MatchEventBuilder for ClutchEvent {
                 .into_iter()
                 .filter(|ke| ke.killer == clutcher)
                 .collect::<Vec<_>>();
+            let defuse_time = round
+                .defuse_round_time
+                .map(|t| Duration::from_millis(round_start_time + t));
             clutches.push(Box::new(Self {
                 clutcher,
                 kill_events,
+                defuse_time,
             }));
         }
         clutches
@@ -76,7 +91,11 @@ impl MatchEvent for ClutchEvent {
             .map(|ke| ke.game_time)
             .sorted()
             .collect::<Vec<_>>();
-        (sorted_events[0], sorted_events[sorted_events.len() - 1])
+        let end = match self.defuse_time {
+            Some(t) => t,
+            None => sorted_events[sorted_events.len() - 1],
+        };
+        (sorted_events[0], end)
     }
 
     fn is_from_puuids(&self, puuids: &HashSet<String>) -> bool {
