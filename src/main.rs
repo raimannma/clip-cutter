@@ -190,6 +190,7 @@ async fn process_match(
 
     let min_offset = match valo_match.match_info.queue_id.unwrap_or(Queue::COMPETITIVE) {
         Queue::DEATHMATCH => 0,
+        Queue::COMPETITIVE => 60000,
         _ => 40000,
     };
 
