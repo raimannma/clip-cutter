@@ -15,7 +15,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
-const VIDEO_MATCH_SPLIT_THRESHOLD: u64 = 2 * 60 * 1000;
+const VIDEO_MATCH_SPLIT_THRESHOLD: u64 = 5 * 60 * 1000;
 
 const VIDEO_ANALYSIS_RATE: usize = 6;
 
@@ -54,6 +54,7 @@ pub(crate) struct Metadata {
     pub(crate) description: String,
     pub(crate) genre: String,
 }
+
 impl IntoIterator for Metadata {
     type Item = (String, String);
     type IntoIter = std::vec::IntoIter<Self::Item>;
