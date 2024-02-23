@@ -49,13 +49,21 @@ impl RetakeEvent {
             .iter()
             .flat_map(|ps| ps.kills.iter())
             .collect_vec();
+        let victims = kills
+            .iter()
+            .map(|k| k.victim.clone())
+            .collect::<HashSet<_>>();
         let round_start_time = kills
             .iter()
             .map(|k| k.time_since_game_start_millis - k.time_since_round_start_millis)
             .sum::<u64>()
             / kills.len() as u64;
         Self {
-            winners: winners.into_iter().map(|p| p.puuid.clone()).collect(),
+            winners: winners
+                .into_iter()
+                .map(|p| p.puuid.clone())
+                .filter(|p| !victims.contains(p))
+                .collect(),
             losers: losers.into_iter().map(|p| p.puuid.clone()).collect(),
             plant_time: Duration::from_millis(round_start_time + round.plant_round_time.unwrap()),
             defuse_time: Duration::from_millis(round_start_time + round.defuse_round_time.unwrap()),
