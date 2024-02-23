@@ -3,6 +3,7 @@ use crate::events::kill_event::KillEvent;
 use crate::valorant;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 use std::collections::HashSet;
 use std::time::Duration;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
@@ -92,7 +93,7 @@ impl MatchEvent for ClutchEvent {
             .sorted()
             .collect::<Vec<_>>();
         let end = match self.defuse_time {
-            Some(t) => t,
+            Some(t) => max(t, sorted_events[sorted_events.len() - 1]),
             None => sorted_events[sorted_events.len() - 1],
         };
         (sorted_events[0], end)
