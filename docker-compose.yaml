@@ -24,6 +24,7 @@ services:
       - "8000:8000"
     environment:
       VIRTUAL_HOST: clip-viewer.manuel-hexe.de
+      LETSENCRYPT_HOST: clip-viewer.manuel-hexe.de
       VIRTUAL_PORT: 8000
       BASE_DIR: /clips/
     volumes:
