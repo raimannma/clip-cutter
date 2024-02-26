@@ -6,6 +6,9 @@
 
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
     <style>
         div#filters {
             display: flex;
@@ -36,27 +39,27 @@
 <body>
 
 <div id="filters">
-    <div class="filter">
+    <div class="filter input-field">
         <label for="gamemode-filter">Gamemode:</label>
-        <select id="gamemode-filter">
+        <select id="gamemode-filter" multiple>
             <option value="">All Gamemodes</option>
         </select>
     </div>
-    <div class="filter">
+    <div class="filter input-field">
         <label for="category-filter">Category:</label>
-        <select id="category-filter">
+        <select id="category-filter" multiple>
             <option value="">All Categories</option>
         </select>
     </div>
-    <div class="filter">
+    <div class="filter input-field">
         <label for="agent-filter">Agent:</label>
-        <select id="agent-filter">
+        <select id="agent-filter" multiple>
             <option value="">All Agents</option>
         </select>
     </div>
-    <div class="filter">
+    <div class="filter input-field">
         <label for="weapon-filter">Weapon:</label>
-        <select id="weapon-filter">
+        <select id="weapon-filter" multiple>
             <option value="">All Weapons</option>
         </select>
     </div>
@@ -90,6 +93,11 @@
             }
         }
     }
+
+    function getSelectValues(select) {
+        return Array.from(select.options).filter(o => o.selected).map(o => o.value || o.text);
+    }
+
 
     const streamerName = urlParams.get("name");
     (async () => {
@@ -127,7 +135,9 @@
                 }
             }
         }
+
         for (const agent of agents) {
+            console.log(agent);
             let option = document.createElement("option");
             option.value = agent;
             option.textContent = agent;
@@ -138,12 +148,12 @@
         async function updateClips() {
             clipsContainer.innerHTML = "";
             for (const gamemode of gamemodes) {
-                if (gamemodeFilter.value && gamemodeFilter.value !== gamemode) continue;
+                if (gamemodeFilter.value && !getSelectValues(gamemodeFilter).includes(gamemode)) continue;
                 for (const category of categories[gamemode]) {
-                    if (categoryFilter.value && categoryFilter.value !== category) continue;
+                    if (categoryFilter.value && !getSelectValues(categoryFilter).includes(category)) continue;
                     for (const clip of clips[gamemode][category]) {
-                        if (agentFilter.value && agentFilter.value !== clip.agent_name) continue;
-                        if (weaponFilter.value && !clip.args.includes(weaponFilter.value.toLowerCase())) continue;
+                        if (agentFilter.value && !getSelectValues(agentFilter).includes(clip.agent_name)) continue;
+                        if (weaponFilter.value && !getSelectValues(weaponFilter).some(w => clip.args.includes(w))) continue;
                         let thumbnailUrl = `/clips/${streamerName}/${clip.gamemode}/${clip.category}/${clip.file_name}/thumbnail`;
                         let videoUrl = `/clips/${streamerName}/${clip.gamemode}/${clip.category}/${clip.file_name}/video`;
                         let clipElement = document.createElement("div");
@@ -181,6 +191,9 @@
             await updateClips();
         };
         await updateClips();
+
+        let elems = document.querySelectorAll('select');
+        M.FormSelect.init(elems, {});
     })();
 </script>
 </body>
