@@ -75,7 +75,23 @@ def get_thumbnail(name: str, gamemode: str, category: str, clip: str):
     thumb_path = os.path.join(THUMBS_DIR, name, gamemode, category, clip + ".png")
     os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
     if not os.path.exists(thumb_path):
-        subprocess.call(["ffmpeg", "-i", video_path, "-ss", "00:00:00.000", "-vframes", "1", "-y", thumb_path])
+        subprocess.call(
+            [
+                "ffmpeg",
+                "-i",
+                video_path,
+                "-ss",
+                "00:00:00.000",
+                "-vframes",
+                "1",
+                "-y",
+                "-q:v",
+                "2",
+                "-vf",
+                "scale=320:-1",
+                thumb_path,
+            ]
+        )
 
     return Response(open(thumb_path, "rb").read(), mimetype="image/png")
 
