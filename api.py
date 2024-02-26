@@ -1,9 +1,9 @@
 import os
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
-import sys
 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "flask"])
 
@@ -36,27 +36,31 @@ class Clip:
 
 @app.get("/favicon.ico")
 def icon():
-    return Response(open('favicon.ico', "rb").read(), mimetype="image/x-icon")
+    return Response(open("favicon.ico", "rb").read(), mimetype="image/x-icon")
 
 
 @app.get("/")
 def index():
-    return Response(open('index.html').read(), mimetype="text/html")
+    return Response(open("index.html").read(), mimetype="text/html")
 
 
 @app.get("/names")
 def get_names():
-    return os.listdir(base_dir)
+    return [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
 
 
 @app.get("/gamemodes/<name>")
 def get_gamemodes(name: str):
-    return os.listdir(os.path.join(base_dir, name))
+    return [d for d in os.listdir(os.path.join(base_dir, name)) if os.path.isdir(os.path.join(base_dir, name, d))]
 
 
 @app.get("/categories/<name>/<gamemode>")
 def get_category(name: str, gamemode: str):
-    return os.listdir(os.path.join(base_dir, name, gamemode))
+    return [
+        d
+        for d in os.listdir(os.path.join(base_dir, name, gamemode))
+        if os.path.isdir(os.path.join(base_dir, name, gamemode, d))
+    ]
 
 
 @app.get("/clips/<name>/<gamemode>/<category>")
@@ -71,7 +75,7 @@ def get_thumbnail(name: str, gamemode: str, category: str, clip: str):
     thumb_path = os.path.join(THUMBS_DIR, name, gamemode, category, clip + ".png")
     os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
     if not os.path.exists(thumb_path):
-        subprocess.call(['ffmpeg', '-i', video_path, '-ss', '00:00:00.000', '-vframes', '1', '-y', thumb_path])
+        subprocess.call(["ffmpeg", "-i", video_path, "-ss", "00:00:00.000", "-vframes", "1", "-y", thumb_path])
 
     return Response(open(thumb_path, "rb").read(), mimetype="image/png")
 
@@ -82,5 +86,5 @@ def get_video(name: str, gamemode: str, category: str, clip: str):
     return Response(open(video_path, "rb").read(), mimetype="video/mp4")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(host="0.0.0.0")
