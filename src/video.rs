@@ -124,9 +124,10 @@ pub(crate) fn format_ffmpeg_time(time: &Duration, with_millis: bool) -> String {
     }
 }
 
-pub(crate) fn detect_kill_events(path: &Path) -> Vec<Duration> {
+pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Duration> {
     let mut process = FfmpegCommand::new()
         .hwaccel("auto")
+        .seek(format!("{}ms", min_offset_millis))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
         .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
@@ -192,7 +193,10 @@ pub(crate) fn detect_kill_events(path: &Path) -> Vec<Duration> {
 
             if num_consecutive_detections > 0 {
                 debug!("Found kill event");
-                kills.push(Duration::from_secs_f32(first_stamp.unwrap()));
+                kills.push(
+                    Duration::from_secs_f32(first_stamp.unwrap())
+                        + Duration::from_millis(min_offset_millis),
+                );
                 first_stamp = None;
                 wait_for_toggle = true;
                 num_consecutive_detections = 0;

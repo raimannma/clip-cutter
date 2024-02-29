@@ -173,7 +173,13 @@ async fn process_match(
     valorant::save_match_video(&match_video_path, vod_id, start, end)
         .expect("Failed to save video");
 
-    let detected_kill_events = video::detect_kill_events(&match_video_path)
+    let min_offset = match valo_match.match_info.queue_id.unwrap_or(Queue::COMPETITIVE) {
+        Queue::DEATHMATCH => 0,
+        Queue::COMPETITIVE => 60000,
+        _ => 40000,
+    };
+
+    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset)
         .into_iter()
         .sorted()
         .collect::<Vec<_>>();
@@ -187,12 +193,6 @@ async fn process_match(
         error!("Fewer detected kill events than match kill events: Detected Kills: {}, Match Kills: {}", detected_kill_events.len(), match_kill_events.len());
         return None;
     }
-
-    let min_offset = match valo_match.match_info.queue_id.unwrap_or(Queue::COMPETITIVE) {
-        Queue::DEATHMATCH => 0,
-        Queue::COMPETITIVE => 60000,
-        _ => 40000,
-    };
 
     let offset = offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)?;
 
