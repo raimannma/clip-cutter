@@ -91,7 +91,8 @@ async fn process_vod(
         let match_id = valo_match.match_info.match_id;
 
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
-        if !force && processed_path.exists() {
+        let failed_path = Path::new("/failed").join(format!("{}-{}", vod_id, match_id));
+        if !force && (processed_path.exists() || failed_path.exists()) {
             debug!("Skipping match: {:?}", match_id);
             continue;
         }
@@ -109,6 +110,9 @@ async fn process_vod(
         {
             std::fs::create_dir_all(processed_path.parent().unwrap()).ok();
             std::fs::write(processed_path, "").unwrap();
+        } else {
+            std::fs::create_dir_all(failed_path.parent().unwrap()).ok();
+            std::fs::write(failed_path, "").unwrap();
         }
     }
 }
