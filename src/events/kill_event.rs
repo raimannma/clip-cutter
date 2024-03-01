@@ -117,25 +117,31 @@ impl MatchEvent for KillEvent {
     async fn category(&self, puuids: &HashSet<String>) -> String {
         let is_from = self.is_from_puuids(puuids);
         let is_against = self.is_against_puuids(puuids);
+        let is_secondary = self.finishing_damage.is_secondary_fire_mode;
+        let is_sniper = [
+            "a03b24d3-4319-996d-0f8c-94bbfba1dfc7",
+            "5f0aaf7a-4289-3998-d5ff-eb9a5cf7ef5c",
+            "c4883e50-4494-202c-3ec3-6b8a9284f00b",
+        ]
+        .contains(&self.finishing_damage.damage_item.to_lowercase().as_str());
+        let is_classic = self.finishing_damage.damage_item.to_lowercase()
+            == "29a0cfab-485b-f5d5-779a-b59f85e204a8";
         if is_from && is_against {
             "Death"
         } else if is_from && self.damage_item_postfix().await.is_some() {
-            let is_sniper = [
-                "a03b24d3-4319-996d-0f8c-94bbfba1dfc7",
-                "5f0aaf7a-4289-3998-d5ff-eb9a5cf7ef5c",
-                "c4883e50-4494-202c-3ec3-6b8a9284f00b",
-            ]
-            .contains(&self.finishing_damage.damage_item.to_lowercase().as_str());
-            let is_secondary = self.finishing_damage.is_secondary_fire_mode;
             if is_sniper && !is_secondary {
-                return "NoScopeSniper".to_string();
-            }
-            if let Some((headshots, bodyshots, legshots)) = self.shots {
+                "NoScopeSniper"
+            } else if is_classic && is_secondary {
+                "RightClick"
+            } else if let Some((headshots, bodyshots, legshots)) = self.shots {
                 if headshots == 1 && bodyshots == 0 && legshots == 0 {
-                    return "Onetap".to_string();
+                    "Onetap"
+                } else {
+                    "Kill"
                 }
+            } else {
+                "Kill"
             }
-            return "Kill".to_string();
         } else if is_from && self.damage_item_postfix().await.is_none() {
             "AbilityKill"
         } else if is_against {
