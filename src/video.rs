@@ -90,10 +90,10 @@ pub(crate) fn split_video(
         None => "".to_string(),
     };
     let ffmpeg_split_command = format!(
-        "ffmpeg -y -i {} -ss {} -to {} -c:a copy -c:v {} -copyts {} {}",
-        path.to_str().unwrap(),
+        "ffmpeg -y -ss {} -to {} -i {} -c:a copy -c:v {} {} {}",
         format_ffmpeg_time(start, true),
         format_ffmpeg_time(end, true),
+        path.to_str().unwrap(),
         encode,
         metadata,
         out_path.to_str().unwrap(),
