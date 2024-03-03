@@ -218,7 +218,7 @@ pub fn save_match_video(
     start: Duration,
     end: Duration,
 ) -> std::io::Result<ExitStatus> {
-    twitch::download_vod(vod_id, match_video_path, &start, &end)
+    twitch::download_vod(vod_id, match_video_path, start, end)
 }
 
 pub(crate) fn get_agent(valo_match: &MatchDetailsV1, puuid: &str) -> Option<Uuid> {

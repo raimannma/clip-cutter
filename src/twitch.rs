@@ -59,8 +59,8 @@ pub async fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime
 pub(crate) fn download_vod(
     vod_id: usize,
     out_path: &Path,
-    start: &Duration,
-    end: &Duration,
+    start: Duration,
+    end: Duration,
 ) -> std::io::Result<ExitStatus> {
     if out_path.exists() {
         debug!("VOD already exists: {}", out_path.display());
@@ -81,8 +81,8 @@ pub(crate) fn download_vod(
 fn download_with_twitchdl(
     vod_id: usize,
     out_path: &Path,
-    start: &Duration,
-    end: &Duration,
+    start: Duration,
+    end: Duration,
 ) -> std::io::Result<ExitStatus> {
     std::process::Command::new("twitch-dl")
         .arg("download")
@@ -101,8 +101,8 @@ fn download_with_twitchdl(
 fn download_with_ytdlp(
     vod_id: usize,
     out_path: &Path,
-    start: &Duration,
-    end: &Duration,
+    start: Duration,
+    end: Duration,
 ) -> std::io::Result<ExitStatus> {
     let download_link = std::process::Command::new("yt-dlp")
         .arg("--get-url")

@@ -244,8 +244,8 @@ async fn process_match(
         if let Err(e) = video::split_video(
             &match_video_path,
             &clip_path,
-            &start,
-            &end,
+            start,
+            end,
             true,
             Some(metadata),
         ) {

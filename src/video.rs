@@ -75,8 +75,8 @@ impl IntoIterator for Metadata {
 pub(crate) fn split_video(
     path: &Path,
     out_path: &Path,
-    start: &Duration,
-    end: &Duration,
+    start: Duration,
+    end: Duration,
     copy_encoding: bool,
     metadata: Option<Metadata>,
 ) -> std::io::Result<PathBuf> {
@@ -111,7 +111,7 @@ fn get_video_offset(video_start: OffsetDateTime, valo_match: &MatchDetailsV1) ->
     Duration::from_millis(match_start - video_start)
 }
 
-pub(crate) fn format_ffmpeg_time(time: &Duration, with_millis: bool) -> String {
+pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
     let millis = time.as_millis();
     let hours = millis / 3600 / 1000;
     let minutes = millis / 60 / 1000 % 60;
