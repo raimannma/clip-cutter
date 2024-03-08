@@ -1,10 +1,8 @@
 #!/usr/bin/bash
 
-source /root/.bashrc
+source /root/.bashrc || true
 
 trap stop SIGINT
-
-docker pull ghcr.io/raimannma/clip-cutter:latest
 
 clean() {
   echo "Cleaning..."
@@ -16,9 +14,18 @@ clean() {
 }
 
 stop() {
+  rclone sync -P state/ Nextcloud:ClipCutter/code/state/
   echo "Stopping..."
   exit 0
 }
+
+docker pull ghcr.io/raimannma/clip-cutter:latest
+docker network create nginx-proxy || true
+
+rclone sync -P Nextcloud:ClipCutter/code/state/ state/
+rclone sync -P Nextcloud:ClipCutter/code/users.json .
+rclone sync -P Nextcloud:ClipCutter/code/model.onnx .
+rclone sync -P Nextcloud:ClipCutter/code/docker-compose.yaml .
 
 for channel in $(jq -r '.[] | .channel' users.json); do
   echo "Processing $channel"
