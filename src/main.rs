@@ -45,6 +45,8 @@ struct Cli {
     category: Option<Vec<String>>,
     #[arg(long, default_value = "false")]
     only_customs: bool,
+    #[arg(long, default_value = "0")]
+    matches_after: u64,
 }
 
 #[tokio::main]
@@ -73,6 +75,7 @@ pub async fn main() {
             args.force,
             &args.category,
             args.only_customs,
+            args.matches_after,
         )
         .await;
     }
@@ -85,6 +88,7 @@ async fn process_vod(
     force: bool,
     category: &Option<Vec<String>>,
     only_customs: bool,
+    matches_after: u64,
 ) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
@@ -93,6 +97,9 @@ async fn process_vod(
 
     for valo_match in matches {
         if only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
+            continue;
+        }
+        if valo_match.match_info.game_start_millis < matches_after {
             continue;
         }
         let match_id = valo_match.match_info.match_id;
