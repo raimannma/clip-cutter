@@ -97,9 +97,11 @@ async fn process_vod(
 
     for valo_match in matches {
         if only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
+            debug!("Skipping match: {:?} not a custom game", valo_match.match_info.match_id);
             continue;
         }
         if valo_match.match_info.game_start_millis < matches_after {
+            debug!("Skipping match: {:?} before matches_after", valo_match.match_info.match_id);
             continue;
         }
         let match_id = valo_match.match_info.match_id;
