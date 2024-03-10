@@ -125,16 +125,17 @@ pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
 }
 
 pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Duration> {
-    let mut process = FfmpegCommand::new()
+    let mut command = FfmpegCommand::new();
+    command
         .hwaccel("auto")
         .seek(format!("{}ms", min_offset_millis))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
         .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
         .no_audio()
-        .rawvideo()
-        .spawn()
-        .unwrap();
+        .rawvideo();
+    debug!("Running command: {:?}", command);
+    let mut process = command.spawn().unwrap();
     let video = process.iter().unwrap();
 
     let mut first_stamp = None;

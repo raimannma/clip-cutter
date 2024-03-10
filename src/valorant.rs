@@ -59,7 +59,10 @@ async fn get_valorant_matches_by_player(
 
     let matches: Vec<&MatchListsEntry> = matches
         .iter()
-        .filter(|m| start - Duration::from_secs(60) < m.game_start_time_millis && m.game_start_time_millis < end)
+        .filter(|m| {
+            start - Duration::from_secs(60) < m.game_start_time_millis
+                && m.game_start_time_millis < end
+        })
         .collect();
 
     let mut matches_data = vec![];
