@@ -43,6 +43,8 @@ struct Cli {
     force: bool,
     #[arg(long)]
     category: Option<Vec<String>>,
+    #[arg(long, default_value = "false")]
+    only_customs: bool,
 }
 
 #[tokio::main]
@@ -70,6 +72,7 @@ pub async fn main() {
             args.remove_matches,
             args.force,
             &args.category,
+            args.only_customs,
         )
         .await;
     }
@@ -81,6 +84,7 @@ async fn process_vod(
     remove_matches: bool,
     force: bool,
     category: &Option<Vec<String>>,
+    only_customs: bool,
 ) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
@@ -88,6 +92,9 @@ async fn process_vod(
         .expect("Failed to find matches");
 
     for valo_match in matches {
+        if only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
+            continue;
+        }
         let match_id = valo_match.match_info.match_id;
 
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
