@@ -114,7 +114,7 @@ fn find_best_offset_statistically(
         .filter(|offset| *offset > min_offset)
         .filter_map(|offset| get_error(offset, offsets1, offsets2).map(|error| (offset, error)))
         .min_by_key(|(_, error)| *error)
-        .and_then(|(offset, error)| (error < 100).then_some((offset, error)))
+        .and_then(|(offset, error)| (error < 200).then_some((offset, error)))
 }
 
 fn get_error(offset: u64, offsets1: &[u32], offsets2: &[u32]) -> Option<u64> {

@@ -199,11 +199,11 @@ async fn process_match(
     valorant::save_match_video(&match_video_path, vod_id, start, end)
         .expect("Failed to save video");
 
-    let min_offset = match valo_match.match_info.queue_id.unwrap_or(Queue::COMPETITIVE) {
+    let min_offset = valo_match.match_info.queue_id.map_or(40000, |q| match q {
         Queue::DEATHMATCH => 0,
         Queue::COMPETITIVE => 60000,
         _ => 40000,
-    };
+    });
 
     let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset)
         .into_iter()
