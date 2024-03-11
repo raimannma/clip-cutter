@@ -47,7 +47,7 @@ struct Cli {
     only_customs: bool,
     #[arg(long, default_value = "0")]
     matches_after: u64,
-    #[arg(long, default_value = "0")]
+    #[arg(long, default_value = "18446744073709551615")]
     matches_before: u64,
 }
 
