@@ -47,6 +47,8 @@ struct Cli {
     only_customs: bool,
     #[arg(long, default_value = "0")]
     matches_after: u64,
+    #[arg(long, default_value = "0")]
+    matches_before: u64,
 }
 
 #[tokio::main]
@@ -76,6 +78,7 @@ pub async fn main() {
             &args.category,
             args.only_customs,
             args.matches_after,
+            args.matches_before,
         )
         .await;
     }
@@ -89,6 +92,7 @@ async fn process_vod(
     category: &Option<Vec<String>>,
     only_customs: bool,
     matches_after: u64,
+    matches_before: u64,
 ) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
@@ -106,6 +110,13 @@ async fn process_vod(
         if valo_match.match_info.game_start_millis < matches_after {
             debug!(
                 "Skipping match: {:?} before matches_after",
+                valo_match.match_info.match_id
+            );
+            continue;
+        }
+        if valo_match.match_info.game_start_millis > matches_before {
+            debug!(
+                "Skipping match: {:?} before matches_before",
                 valo_match.match_info.match_id
             );
             continue;
