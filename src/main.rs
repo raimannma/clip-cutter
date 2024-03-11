@@ -107,6 +107,13 @@ async fn process_vod(
             );
             continue;
         }
+        if only_customs && valo_match.players.len() < 10 {
+            debug!(
+                "Skipping match: {:?} not enough players",
+                valo_match.match_info.match_id
+            );
+            continue;
+        }
         if valo_match.match_info.game_start_millis < matches_after {
             debug!(
                 "Skipping match: {:?} before matches_after",
