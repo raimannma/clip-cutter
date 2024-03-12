@@ -27,6 +27,7 @@ impl MatchEventBuilder for AceEvent {
                 kill_events: ps
                     .kills
                     .into_iter()
+                    .filter(|k| k.killer != k.victim)
                     .map(KillEvent::from)
                     .sorted_by_key(|ke| ke.game_time)
                     .collect_vec(),
