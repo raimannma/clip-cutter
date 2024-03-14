@@ -5,10 +5,13 @@ import time
 from functools import lru_cache
 
 import numpy as np
+from onnx.compose import merge_models
+from onnxconverter_common import Int64TensorType
 from skimage.io import imread, imsave
 from skimage.transform import resize
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
+from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -17,6 +20,13 @@ from tqdm import tqdm
 
 def train():
     X, y = load_dataset()
+
+    X_pca, _, _, _ = train_test_split(X, y, train_size=5000, shuffle=True)
+
+    pca = PCA(n_components=0.95, svd_solver="full")
+    pca.fit(X_pca)
+    X = pca.transform(X)
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, shuffle=True)
 
     classifier = SVC(verbose=True, tol=1e-6, max_iter=10000, class_weight="balanced")
@@ -31,7 +41,8 @@ def train():
 
     print(f"{score * 100:.2f}% of samples were correctly classified")
 
-    pickle.dump(classifier, open("./model.p", "wb"))
+    pickle.dump(pca, open("./pca.p", "wb"))
+    pickle.dump(classifier, open("./svm.p", "wb"))
 
 
 def preprocess_img(img_path):
@@ -65,8 +76,10 @@ def load_dataset():
 
 def benchmark():
     X, y = load_dataset()
-    model = pickle.load(open("./model.p", "rb"))
+    pca = pickle.load(open("./pca.p", "rb"))
+    model = pickle.load(open("./svm.p", "rb"))
     times = []
+    X = pca.transform(X)
     # warmup
     for img in X[:10]:
         model.predict([img])
@@ -80,32 +93,51 @@ def benchmark():
 
 
 def infer():
-    model = pickle.load(open("./model.p", "rb"))
+    pca = pickle.load(open("./pca.p", "rb"))
+    svm = pickle.load(open("./svm.p", "rb"))
 
-    # base_dir = "kill-data/kill"
-    # for file in tqdm(os.listdir(base_dir)):
-    #     img = preprocess_img(os.path.join(base_dir, file))
-    #     prediction = model.predict([img])
-    #     if prediction != 1:
-    #         shutil.move(os.path.join(base_dir, file), os.path.join("kill-data/wrong", file))
-    #         print(f"Wrong prediction for {file}")
-
-    base_dir = "kill-data/no_kill"
+    base_dir = "kill-data/kill"
     for file in tqdm(os.listdir(base_dir)):
         img = preprocess_img(os.path.join(base_dir, file))
-        prediction = model.predict([img])
-        if prediction != 0:
+        img = pca.transform([img])[0]
+        prediction = svm.predict([img])
+        if prediction != 1:
             shutil.move(os.path.join(base_dir, file), os.path.join("kill-data/wrong", file))
             print(f"Wrong prediction for {file}")
 
+    # base_dir = "kill-data/no_kill"
+    # for file in tqdm(os.listdir(base_dir)):
+    #     img = preprocess_img(os.path.join(base_dir, file))
+    #     img = pca.transform([img])[0]
+    #     prediction = svm.predict([img])
+    #     if prediction != 0:
+    #         shutil.move(os.path.join(base_dir, file), os.path.join("kill-data/wrong", file))
+    #         print(f"Wrong prediction for {file}")
 
-def export():
-    model = pickle.load(open("./model.p", "rb"))
-    initial_type = [("float_input", FloatTensorType([1, 50 * 50 * 3]))]
-    onnx = convert_sklearn(model, initial_types=initial_type, target_opset=18, model_optim=True)
-    sequence_outputs = (o for o in onnx.graph.output if o.type.WhichOneof("value") == "sequence_type")
-    for o in sequence_outputs:
+
+def export(input_size: int = 50 * 50 * 3):
+    pca = pickle.load(open("./pca.p", "rb"))
+    svm = pickle.load(open("./svm.p", "rb"))
+
+    pca_input = [("pca_input", FloatTensorType([1, input_size]))]
+    pca_output = [("pca_output", FloatTensorType([1, pca.transform([[0] * input_size]).shape[1]]))]
+    svm_input = [("svm_input", FloatTensorType([1, pca.transform([[0] * input_size]).shape[1]]))]
+
+    pca_onnx = convert_sklearn(pca, initial_types=pca_input, final_types=pca_output, target_opset=18, model_optim=True)
+    svm_onnx = convert_sklearn(svm, initial_types=svm_input, target_opset=18, model_optim=True)
+
+    pca_onnx.opset_import[0].version = 9
+
+    onnx = merge_models(pca_onnx, svm_onnx, io_map=[
+        ("pca_output", "svm_input")
+    ])
+    remove_outputs = (o for o in onnx.graph.output if
+                      o.type.WhichOneof("value") == "sequence_type" or o.name == "probabilities")
+    for o in remove_outputs:
         onnx.graph.output.remove(o)
+    remove_nodes = (n for n in onnx.graph.node if n.output[0] == "probabilities")
+    for n in remove_nodes:
+        onnx.graph.node.remove(n)
     with open("model.onnx", "wb") as f:
         f.write(onnx.SerializeToString())
 

@@ -7,6 +7,8 @@ kill-data/
 results/
 /clips/
 /model.p
+/pca.p
+/svm.p
 venv/
 users.json
 model.onnx
