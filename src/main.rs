@@ -29,7 +29,7 @@ lazy_static! {
         (Duration::from_secs(10), Duration::from_secs(10));
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone, Eq, Hash, PartialEq)]
 #[command(author, version, about, long_about = None)]
 #[command(next_line_help = true)]
 struct Cli {
@@ -69,59 +69,40 @@ pub async fn main() {
     .filter_map(|x| x.ok())
     .collect::<HashSet<_>>();
 
-    for vod_id in args.vod_ids {
-        process_vod(
-            vod_id.parse().unwrap(),
-            &puuids,
-            args.remove_matches,
-            args.force,
-            &args.category,
-            args.only_customs,
-            args.matches_after,
-            args.matches_before,
-        )
-        .await;
+    for vod_id in &args.vod_ids {
+        process_vod(vod_id.parse().unwrap(), &puuids, args.clone()).await;
     }
 }
 
-async fn process_vod(
-    vod_id: usize,
-    puuids: &HashSet<String>,
-    remove_matches: bool,
-    force: bool,
-    category: &Option<Vec<String>>,
-    only_customs: bool,
-    matches_after: u64,
-    matches_before: u64,
-) {
+async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
     let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
         .await
         .expect("Failed to find matches");
 
     for valo_match in matches {
-        if only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
+        if args.only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
             debug!(
                 "Skipping match: {:?} not a custom game",
                 valo_match.match_info.match_id
             );
             continue;
         }
-        if only_customs && valo_match.players.len() < 10 {
+        if args.only_customs && valo_match.players.len() < 10 {
             debug!(
                 "Skipping match: {:?} not enough players",
                 valo_match.match_info.match_id
             );
             continue;
         }
-        if valo_match.match_info.game_start_millis < matches_after {
+        if valo_match.match_info.game_start_millis < args.matches_after {
             debug!(
                 "Skipping match: {:?} before matches_after",
                 valo_match.match_info.match_id
             );
             continue;
         }
-        if valo_match.match_info.game_start_millis > matches_before {
+        if valo_match.match_info.game_start_millis > args.matches_before {
             debug!(
                 "Skipping match: {:?} before matches_before",
                 valo_match.match_info.match_id
@@ -132,7 +113,7 @@ async fn process_vod(
 
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
         let failed_path = Path::new("/failed").join(format!("{}-{}", vod_id, match_id));
-        if !force && (processed_path.exists() || failed_path.exists()) {
+        if !args.force && (processed_path.exists() || failed_path.exists()) {
             debug!("Skipping match: {:?}", match_id);
             continue;
         }
@@ -142,8 +123,8 @@ async fn process_vod(
             vod_id,
             vod_interval,
             &valo_match,
-            remove_matches,
-            category,
+            args.remove_matches,
+            &args.category,
         )
         .await
         .is_some()
