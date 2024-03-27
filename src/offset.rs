@@ -21,6 +21,32 @@ pub(crate) fn get_offset(
         .collect::<Vec<_>>();
 
     find_best_offset_semi_statistically(&offsets1, &offsets2, min_offset)
+        .or(get_optimized_offset(&offsets2, &offsets1, min_offset))
+}
+
+pub(crate) fn get_optimized_offset(
+    offsets1: &[u32],
+    offsets2: &[u32],
+    min_offset: u64,
+) -> Option<u64> {
+    let mut optimizer = tpe::TpeOptimizer::new(
+        tpe::histogram_estimator(),
+        tpe::range(min_offset as f64, 250_000.).unwrap(),
+    );
+    let mut best_offset = None;
+    let mut smallest_error = None;
+    let mut random = StdRng::from_seed(Default::default());
+    for _ in tqdm!(0..10000, desc = "Optimizing") {
+        let offset = optimizer.ask(&mut random).unwrap() as u64;
+        let error = get_error(offset, offsets1, offsets2).unwrap();
+        if smallest_error.is_none() || error < smallest_error.unwrap() {
+            smallest_error = Some(error);
+            best_offset = Some(offset)
+        }
+    }
+    debug!("Best offset: {:?}", best_offset);
+    debug!("Smallest error: {:?}", smallest_error);
+    best_offset
 }
 
 fn find_best_offset_semi_statistically(
