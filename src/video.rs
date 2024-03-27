@@ -37,13 +37,13 @@ lazy_static! {
 pub(crate) fn get_match_interval(
     video_start: OffsetDateTime,
     valo_match: &MatchDetailsV1,
-) -> (Duration, Duration) {
-    let start = get_video_offset(video_start, valo_match);
+) -> Result<(Duration, Duration), String> {
+    let start = get_video_offset(video_start, valo_match)?;
     let end = start
         + Duration::from_millis(
             valorant::get_match_length(valo_match) + VIDEO_MATCH_SPLIT_THRESHOLD,
         );
-    (start, end)
+    Ok((start, end))
 }
 
 pub(crate) struct Metadata {
@@ -105,10 +105,16 @@ pub(crate) fn split_video(
     Ok(Path::new(&out_path).to_path_buf())
 }
 
-fn get_video_offset(video_start: OffsetDateTime, valo_match: &MatchDetailsV1) -> Duration {
+fn get_video_offset(
+    video_start: OffsetDateTime,
+    valo_match: &MatchDetailsV1,
+) -> Result<Duration, String> {
     let match_start = valo_match.match_info.game_start_millis;
     let video_start = video_start.unix_timestamp() as u64 * 1000;
-    Duration::from_millis(match_start - video_start)
+    match match_start > video_start {
+        true => Ok(Duration::from_millis(match_start - video_start)),
+        false => Err("Video start is after match start".to_string()),
+    }
 }
 
 pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {

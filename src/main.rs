@@ -193,8 +193,14 @@ async fn process_match(
     }
 
     let match_video_path =
-        Path::new("matches").join(format!("{}-{}.mp4", vod_id, valo_match.match_info.match_id));
-    let (start, end) = video::get_match_interval(vod_interval.0, valo_match);
+        Path::new("matches").join(format!("{}-{}.mkv", vod_id, valo_match.match_info.match_id));
+    let (start, end) = match video::get_match_interval(vod_interval.0, valo_match) {
+        Ok(interval) => interval,
+        Err(msg) => {
+            error!("Failed to get match interval: {}", msg);
+            return None;
+        }
+    };
     valorant::save_match_video(&match_video_path, vod_id, start, end)
         .expect("Failed to save video");
 

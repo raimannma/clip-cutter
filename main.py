@@ -21,11 +21,8 @@ from tqdm import tqdm
 def train():
     X, y = load_dataset()
 
-    X_pca, _, _, _ = train_test_split(X, y, train_size=5000, shuffle=True)
-
     pca = PCA(n_components=0.95, svd_solver="full")
-    pca.fit(X_pca)
-    X = pca.transform(X)
+    X = pca.fit_transform(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, shuffle=True)
 

@@ -19,8 +19,8 @@ pub(crate) struct RetakeEvent {
 fn is_attacker(round_num: u8, team: &TeamUnion) -> bool {
     if let TeamUnion::Team(t) = team {
         match t {
-            Team::RED => is_attacker_red(round_num),
-            Team::BLUE => !is_attacker_red(round_num),
+            Team::RED => is_red_attacker(round_num),
+            Team::BLUE => !is_red_attacker(round_num),
             _ => false,
         }
     } else {
@@ -28,7 +28,7 @@ fn is_attacker(round_num: u8, team: &TeamUnion) -> bool {
     }
 }
 
-fn is_attacker_red(round_num: u8) -> bool {
+fn is_red_attacker(round_num: u8) -> bool {
     if round_num < 12 {
         return true;
     }
