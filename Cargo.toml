@@ -20,7 +20,7 @@ time = { version = "0.3.34", features = ["parsing", "formatting"] }
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.7.0", features = ["v4"] }
 valorant_api_official = "0.0.8"
-image =  "0.24.8"
+image = "0.25.0"
 serde_json = "1.0.114"
 serde = "1.0.197"
 ffmpeg-sidecar = "1.0.0"
@@ -36,3 +36,4 @@ tpe = { git = "https://github.com/raimannma/tpe", version = "0.2.0" }
 ort = "1.16.3"
 filetime_creation = "0.2.0"
 tuple-conv = "1.0.1"
+image-compare = "0.4.0"

@@ -17,8 +17,10 @@ use log::{debug, error, info};
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::path::Path;
+use std::str::FromStr;
 use std::time::{Duration, SystemTime};
 use time::{format_description, OffsetDateTime};
+use uuid::Uuid;
 use valorant_api_official::enums::queue::Queue;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
@@ -49,6 +51,8 @@ struct Cli {
     matches_after: u64,
     #[arg(long, default_value = "18446744073709551615")]
     matches_before: u64,
+    #[arg(long)]
+    offset: Option<u64>,
 }
 
 #[tokio::main]
@@ -111,6 +115,10 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
         }
         let match_id = valo_match.match_info.match_id;
 
+        if match_id != Uuid::from_str("05723c8f-4b63-43f9-b9e1-233fd8c50532").unwrap() {
+            continue;
+        }
+
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
         let failed_path = Path::new("/failed").join(format!("{}-{}", vod_id, match_id));
         if !args.force && (processed_path.exists() || failed_path.exists()) {
@@ -125,6 +133,7 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
             &valo_match,
             args.remove_matches,
             &args.category,
+            &args.offset,
         )
         .await
         .is_some()
@@ -145,6 +154,7 @@ async fn process_match(
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
     category: &Option<Vec<String>>,
+    offset: &Option<u64>,
 ) -> Option<()> {
     debug!("Filtering for category: {:?}", category);
     let events = events::build_events(valo_match)
@@ -210,22 +220,36 @@ async fn process_match(
         _ => 40000,
     });
 
-    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset)
-        .into_iter()
-        .sorted()
-        .collect::<Vec<_>>();
+    let agent = valo_match
+        .players
+        .iter()
+        .find(|p| puuids.contains(&p.puuid))?
+        .character_id
+        .unwrap();
 
-    if detected_kill_events.is_empty() {
-        error!("No detected kill events found");
-        return None;
-    }
+    let offset = match offset {
+        Some(offset) => Some(*offset),
+        None => {
+            let detected_kill_events =
+                video::detect_kill_events(&match_video_path, min_offset, agent)
+                    .await
+                    .into_iter()
+                    .sorted()
+                    .collect::<Vec<_>>();
 
-    if (detected_kill_events.len() as i64) < (match_kill_events.len() as i64 / 2) {
-        error!("Fewer detected kill events than match kill events: Detected Kills: {}, Match Kills: {}", detected_kill_events.len(), match_kill_events.len());
-        return None;
-    }
+            if detected_kill_events.is_empty() {
+                error!("No detected kill events found");
+                return None;
+            }
 
-    let offset = offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)?;
+            if (detected_kill_events.len() as i64) < (match_kill_events.len() as i64 / 2) {
+                error!("Fewer detected kill events than match kill events: Detected Kills: {}, Match Kills: {}", detected_kill_events.len(), match_kill_events.len());
+                return None;
+            }
+
+            offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)
+        }
+    }?;
 
     let offset = Duration::from_millis(offset - 350);
 

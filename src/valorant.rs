@@ -16,6 +16,7 @@ use valorant_api_official::utils::credentials_manager::CredentialsManager;
 
 use crate::twitch;
 use cached::UnboundCache;
+use image::{ImageBuffer, ImageFormat, Rgb, Rgba};
 use log::info;
 use std::time::Duration;
 
@@ -160,6 +161,7 @@ struct APIData<T> {
 #[serde(rename_all = "camelCase")]
 struct AgentData {
     display_name: String,
+    display_icon_small: String,
 }
 
 #[cached(
@@ -215,6 +217,22 @@ pub(crate) async fn get_map_name(map_url: &str) -> reqwest::Result<Option<String
         .map(|m| m.display_name))
 }
 
+#[cached(
+    type = "UnboundCache<String, ImageBuffer<Rgb<u8>, Vec<u8>>>",
+    create = "{ UnboundCache::new() }",
+    result = true,
+    convert = r#"{ format!("{}", agent) }"#
+)]
+pub(crate) async fn get_agent_image(agent: Uuid) -> reqwest::Result<ImageBuffer<Rgb<u8>, Vec<u8>>> {
+    let url = format!("https://valorant-api.com/v1/agents/{}", agent);
+    let response: APIData<AgentData> = reqwest::get(url).await?.json().await?;
+    let image_url = response.data.display_icon_small;
+    let image = reqwest::get(image_url).await?.bytes().await?;
+    let image = image::load_from_memory_with_format(&image, ImageFormat::Png).unwrap();
+    let image = rgba8_to_rgb8(image.to_rgba8());
+    Ok(image)
+}
+
 pub fn save_match_video(
     match_video_path: &Path,
     vod_id: usize,
@@ -230,4 +248,28 @@ pub(crate) fn get_agent(valo_match: &MatchDetailsV1, puuid: &str) -> Option<Uuid
         .iter()
         .find(|p| p.puuid == puuid)
         .and_then(|p| p.character_id)
+}
+
+fn rgba8_to_rgb8(
+    input: image::ImageBuffer<Rgba<u8>, Vec<u8>>,
+) -> image::ImageBuffer<Rgb<u8>, Vec<u8>> {
+    let width = input.width() as usize;
+    let height = input.height() as usize;
+
+    // Get the raw image data as a vector
+    let input: &Vec<u8> = input.as_raw();
+
+    // Allocate a new buffer for the RGB image, 3 bytes per pixel
+    let mut output_data = vec![0u8; width * height * 3];
+
+    let mut i = 0;
+    // Iterate through 4-byte chunks of the image data (RGBA bytes)
+    for chunk in input.chunks(4) {
+        // ... and copy each of them to output, leaving out the A byte
+        output_data[i..i + 3].copy_from_slice(&chunk[0..3]);
+        i += 3;
+    }
+
+    // Construct a new image
+    image::ImageBuffer::from_raw(width as u32, height as u32, output_data).unwrap()
 }

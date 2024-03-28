@@ -1,13 +1,17 @@
 use crate::valorant;
 use ffmpeg_sidecar::command::FfmpegCommand;
 use ffmpeg_sidecar::event::{FfmpegEvent, OutputVideoFrame};
-use image::{ImageBuffer, Rgb};
+use image::imageops::FilterType;
+use image::{imageops, GenericImageView, ImageBuffer, Rgb, Rgba, RgbaImage};
+use image_compare::Algorithm;
 use kdam::tqdm;
 use lazy_static::lazy_static;
 use log::{debug, warn};
 use ndarray::{Array, ArrayBase, CowArray, CowRepr};
 use ort::environment::Environment;
 use ort::{GraphOptimizationLevel, LoggingLevel, OrtResult, Session, SessionBuilder, Value};
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -18,6 +22,8 @@ use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 const VIDEO_MATCH_SPLIT_THRESHOLD: u64 = 5 * 60 * 1000;
 
 const VIDEO_ANALYSIS_RATE: usize = 6;
+
+const AGENT_BAR: [u32; 4] = [445, 58, 748, 96];
 
 lazy_static! {
     static ref ORT_ENVIRONMENT: Arc<Environment> = Environment::builder()
@@ -130,14 +136,18 @@ pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
     }
 }
 
-pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Duration> {
+pub(crate) async fn detect_kill_events(
+    path: &Path,
+    min_offset_millis: u64,
+    agent: Uuid,
+) -> Vec<Duration> {
     let mut command = FfmpegCommand::new();
     command
         .hwaccel("auto")
         .seek(format!("{}ms", min_offset_millis))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
-        .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
+        // .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
         .no_audio()
         .rawvideo();
     debug!("Running command: {:?}", command);
@@ -152,7 +162,14 @@ pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Dur
 
     for (i, frame) in tqdm!(video.enumerate(), desc = "Detecting kill events") {
         if let FfmpegEvent::OutputFrame(frame) = frame {
-            let has_kill = match has_kill(&frame) {
+            let image: ImageBuffer<Rgb<u8>, _> =
+                ImageBuffer::from_raw(frame.width, frame.height, frame.data)
+                    .expect("Failed to create image buffer");
+            if !is_alive(&image, agent).await {
+                warn!("Agent is dead");
+                continue;
+            }
+            let has_kill = match has_kill(&image) {
                 Ok(v) => v,
                 Err(e) => {
                     warn!("Failed to classify frame: {}", e);
@@ -160,11 +177,12 @@ pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Dur
                 }
             };
             if cfg!(debug_assertions) {
-                let image: ImageBuffer<Rgb<u8>, _> =
-                    ImageBuffer::from_raw(frame.width, frame.height, frame.data.clone())
-                        .expect("Failed to create image buffer");
                 let label = if has_kill { "kill" } else { "no_kill" };
-                image
+                let cropped_image = image
+                    .view(image.width() / 2 - 100, image.height() * 7 / 10, 200, 200)
+                    .to_image();
+                let scaled_image = imageops::resize(&cropped_image, 50, 50, FilterType::Nearest);
+                scaled_image
                     .save(format!(
                         "kill-data/unclassified/{}/{}-{}.png",
                         label,
@@ -213,11 +231,15 @@ pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Dur
     kills
 }
 
-fn has_kill(frame: &OutputVideoFrame) -> OrtResult<bool> {
+fn has_kill(frame: &ImageBuffer<Rgb<u8>, Vec<u8>>) -> OrtResult<bool> {
+    let cropped_image = frame
+        .view(frame.width() / 2 - 100, frame.height() * 7 / 10, 200, 200)
+        .to_image();
+    let scaled_image = imageops::resize(&cropped_image, 50, 50, FilterType::Nearest);
     let array = Array::from_shape_vec(
         (1, 3 * 50 * 50),
-        frame
-            .data
+        scaled_image
+            .as_raw()
             .iter()
             .map(|v| *v as f32 / 255.)
             .collect::<Vec<_>>(),
@@ -228,4 +250,30 @@ fn has_kill(frame: &OutputVideoFrame) -> OrtResult<bool> {
     let outputs = ORT_SESSION.run(vec![tensor])?;
     let output = outputs.first().unwrap().try_extract()?;
     Ok(output.view().iter().all(|v: &i64| *v > 0))
+}
+
+async fn is_alive(frame: &ImageBuffer<Rgb<u8>, Vec<u8>>, agent: Uuid) -> bool {
+    let agent_image = valorant::get_agent_image(agent).await.unwrap();
+    let scaled_agent_image = imageops::resize(&agent_image, 28, 28, FilterType::Nearest);
+    let width = AGENT_BAR[2] - AGENT_BAR[0];
+    let height = AGENT_BAR[3] - AGENT_BAR[1];
+    let cropped_image = frame
+        .view(AGENT_BAR[0], AGENT_BAR[1], width, height)
+        .to_image();
+    let sub_width = (width - 4 * 28) / 5;
+    (0..5)
+        .map(|i| {
+            let image = cropped_image
+                .view(sub_width * i + 28 * i, 0, sub_width, height)
+                .to_image();
+            let image = imageops::resize(&image, 28, 28, FilterType::Nearest);
+            image_compare::rgb_similarity_structure(
+                &Algorithm::MSSIMSimple,
+                &image,
+                &scaled_agent_image,
+            )
+            .unwrap()
+            .score
+        })
+        .any(|v| v > 0.1)
 }
