@@ -133,6 +133,9 @@ pub(crate) async fn get_puuid(riot_id: &str) -> Result<String, RequestError> {
     let credentials_manager = CredentialsManager {
         api_key: API_KEY.clone(),
     };
+    if riot_id.len() == 78 {
+        return Ok(riot_id.to_string());
+    }
     let (name, tag) = riot_id.split_once('#').expect("Failed to split riot id");
 
     valorant_api_official::get_accounts_by_name_v1(&credentials_manager, &http_client, name, tag)
