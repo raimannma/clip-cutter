@@ -166,7 +166,7 @@ struct AgentData {
 }
 
 #[cached(
-    type = "UnboundCache<String, String>",
+    ty = "UnboundCache<String, String>",
     create = "{ UnboundCache::with_capacity(30) }",
     result = true,
     convert = r#"{ format!("{}", agent_uuid) }"#
@@ -184,7 +184,7 @@ struct WeaponData {
 }
 
 #[cached(
-    type = "UnboundCache<String, String>",
+    ty = "UnboundCache<String, String>",
     create = "{ UnboundCache::with_capacity(30) }",
     result = true,
     convert = r#"{ format!("{}", weapon_uuid) }"#
@@ -203,7 +203,7 @@ struct MapData {
 }
 
 #[cached(
-    type = "UnboundCache<String, Option<String>>",
+    ty = "UnboundCache<String, Option<String>>",
     create = "{ UnboundCache::with_capacity(30) }",
     result = true,
     convert = r#"{ format!("{}", map_url) }"#
