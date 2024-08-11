@@ -25,6 +25,8 @@ use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 lazy_static! {
     static ref CLIP_DATE_TIME_PREFIX: Vec<format_description::FormatItem<'static>> =
         format_description::parse("[day]-[month]-[year]_[hour]-[minute]-[second]").unwrap();
+    static ref CLIP_DATE_PREFIX: Vec<format_description::FormatItem<'static>> =
+        format_description::parse("[day]-[month]-[year]").unwrap();
     static ref CLIP_PADDING: (Duration, Duration) =
         (Duration::from_secs(10), Duration::from_secs(10));
 }
@@ -279,8 +281,24 @@ async fn process_match(
         let event_date = (match_date + start).format(&CLIP_DATE_TIME_PREFIX).unwrap();
         let (start, end) = (start + offset, end + offset);
 
-        let clip_name = format!("{}_{}_{}.mp4", event_date, map_name, name_postfix);
+        // timestamp of event in vod
+        let event_vod_time = match_date - vod_interval.0 + start;
+        let seconds = event_vod_time.whole_seconds();
+        let hours = seconds / 3600;
+        let minutes = (seconds % 3600) / 60;
+        let seconds = seconds % 60;
+        let event_vod_time = format!("{:02}-{:02}-{:02}", hours, minutes, seconds);
+
+        let clip_name = format!(
+            "{}_{}_{}_{}.mp4",
+            event_vod_time, event_date, map_name, name_postfix
+        );
         let clip_path = Path::new("clips")
+            .join(format!(
+                "{}-{}",
+                vod_id,
+                vod_interval.0.format(&CLIP_DATE_PREFIX).unwrap()
+            ))
             .join(game_mode)
             .join(&category)
             .join(clip_name);
