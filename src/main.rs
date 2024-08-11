@@ -218,7 +218,7 @@ async fn process_match(
         _ => 40000,
     });
 
-    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 1)
+    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 0)
         .into_iter()
         .sorted()
         .collect::<Vec<_>>();
