@@ -295,7 +295,7 @@ async fn process_match(
         );
         let clip_path = Path::new("clips")
             .join(format!(
-                "{}-{}",
+                "{}_{}",
                 vod_id,
                 vod_interval.0.format(&CLIP_DATE_PREFIX).unwrap()
             ))
