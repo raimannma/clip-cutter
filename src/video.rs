@@ -130,7 +130,11 @@ pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
     }
 }
 
-pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Duration> {
+pub(crate) fn detect_kill_events(
+    path: &Path,
+    min_offset_millis: u64,
+    consecutive_kills: i32,
+) -> Vec<Duration> {
     let mut command = FfmpegCommand::new();
     command
         .hwaccel("auto")
@@ -198,7 +202,7 @@ pub(crate) fn detect_kill_events(path: &Path, min_offset_millis: u64) -> Vec<Dur
             first_stamp = first_stamp.or(Some(frame.timestamp));
             num_consecutive_detections += 1;
 
-            if num_consecutive_detections > 1 {
+            if num_consecutive_detections > consecutive_kills {
                 debug!("Found kill event");
                 kills.push(
                     Duration::from_secs_f32(first_stamp.unwrap())

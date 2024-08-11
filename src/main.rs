@@ -69,7 +69,15 @@ pub async fn main() {
     .filter_map(|x| x.ok())
     .collect::<HashSet<_>>();
 
-    for vod_id in &args.vod_ids {
+    let vod_ids = args
+        .vod_ids
+        .iter()
+        .flat_map(|x| x.split(','))
+        .flat_map(|x| x.split(' '))
+        .flat_map(|x| x.split('\n'))
+        .collect_vec();
+
+    for vod_id in vod_ids {
         process_vod(vod_id.parse().unwrap(), &puuids, args.clone()).await;
     }
 }
@@ -210,7 +218,7 @@ async fn process_match(
         _ => 40000,
     });
 
-    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset)
+    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 1)
         .into_iter()
         .sorted()
         .collect::<Vec<_>>();
@@ -225,7 +233,26 @@ async fn process_match(
         return None;
     }
 
-    let offset = offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)?;
+    let offset = match offset::get_offset(&detected_kill_events, &match_kill_events, min_offset) {
+        Some(offset) => offset,
+        None => {
+            let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 1)
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>();
+
+            if detected_kill_events.is_empty() {
+                error!("No detected kill events found");
+                return None;
+            }
+
+            if (detected_kill_events.len() as i64) < (match_kill_events.len() as i64 / 2) {
+                error!("Fewer detected kill events than match kill events: Detected Kills: {}, Match Kills: {}", detected_kill_events.len(), match_kill_events.len());
+                return None;
+            }
+            offset::get_offset(&detected_kill_events, &match_kill_events, min_offset)?
+        }
+    };
 
     let offset = Duration::from_millis(offset - 350);
 
