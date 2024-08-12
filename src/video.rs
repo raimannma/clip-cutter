@@ -180,7 +180,7 @@ pub(crate) fn detect_kill_events(
 pub(crate) fn detect_kill_timestamps(path: &Path, min_offset_millis: u64) -> Vec<(f32, bool)> {
     let mut command = FfmpegCommand::new();
     command
-        .hwaccel("none")
+        .hwaccel("auto")
         .seek(format!("{}ms", min_offset_millis))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
