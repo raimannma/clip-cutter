@@ -130,9 +130,7 @@ fn download_with_ytdlp(
 }
 
 pub fn parse_length(length: &str) -> usize {
-    let parts: Vec<&str> = length
-        .split_inclusive(|c| c == 'h' || c == 'm' || c == 's')
-        .collect();
+    let parts: Vec<&str> = length.split_inclusive(['h', 'm', 's']).collect();
     let mut seconds: usize = 0;
     for part in parts {
         if part.ends_with('h') {

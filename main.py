@@ -6,7 +6,6 @@ from functools import lru_cache
 
 import numpy as np
 from onnx.compose import merge_models
-from onnxconverter_common import Int64TensorType
 from skimage.io import imread, imsave
 from skimage.transform import resize
 from skl2onnx import convert_sklearn
@@ -21,12 +20,14 @@ from tqdm import tqdm
 def train():
     X, y = load_dataset()
 
-    pca = PCA(n_components=0.95, svd_solver="full")
-    X = pca.fit_transform(X)
-
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, shuffle=True)
 
-    classifier = SVC(verbose=True, tol=1e-6, max_iter=10000, class_weight="balanced")
+    pca = PCA(n_components=150)
+    pca.fit(X_train)
+    X_train = pca.transform(X_train)
+    X_test = pca.transform(X_test)
+
+    classifier = SVC(verbose=True, tol=1e-6, class_weight="balanced")
 
     classifier.fit(X_train, y_train)
 
@@ -116,9 +117,9 @@ def export(input_size: int = 50 * 50 * 3):
     pca = pickle.load(open("./pca.p", "rb"))
     svm = pickle.load(open("./svm.p", "rb"))
 
-    pca_input = [("pca_input", FloatTensorType([1, input_size]))]
-    pca_output = [("pca_output", FloatTensorType([1, pca.transform([[0] * input_size]).shape[1]]))]
-    svm_input = [("svm_input", FloatTensorType([1, pca.transform([[0] * input_size]).shape[1]]))]
+    pca_input = [("pca_input", FloatTensorType([None, input_size]))]
+    pca_output = [("pca_output", FloatTensorType([None, pca.transform([[0] * input_size]).shape[1]]))]
+    svm_input = [("svm_input", FloatTensorType([None, pca.transform([[0] * input_size]).shape[1]]))]
 
     pca_onnx = convert_sklearn(pca, initial_types=pca_input, final_types=pca_output, target_opset=18, model_optim=True)
     svm_onnx = convert_sklearn(svm, initial_types=svm_input, target_opset=18, model_optim=True)

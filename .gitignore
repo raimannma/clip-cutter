@@ -13,3 +13,7 @@ venv/
 users.json
 model.onnx
 twitch-dl
+/lightning_logs/
+/logs/
+/.venv/
+/model.pth

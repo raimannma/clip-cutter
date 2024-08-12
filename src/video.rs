@@ -1,7 +1,6 @@
 use crate::valorant;
 use ffmpeg_sidecar::command::FfmpegCommand;
 use ffmpeg_sidecar::event::{FfmpegEvent, OutputVideoFrame};
-use image::{ImageBuffer, Rgb};
 use kdam::tqdm;
 use lazy_static::lazy_static;
 use log::{debug, warn};
@@ -12,12 +11,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use time::OffsetDateTime;
-use uuid::Uuid;
 use valorant_api_official::response_types::matchdetails_v1::MatchDetailsV1;
 
 const VIDEO_MATCH_SPLIT_THRESHOLD: u64 = 5 * 60 * 1000;
 
-const VIDEO_ANALYSIS_RATE: usize = 6;
+const VIDEO_ANALYSIS_RATE: usize = 3;
 
 lazy_static! {
     static ref ORT_ENVIRONMENT: Arc<Environment> = Environment::builder()
@@ -131,99 +129,95 @@ pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
 }
 
 pub(crate) fn detect_kill_events(
-    path: &Path,
     min_offset_millis: u64,
     consecutive_kills: i32,
+    kill_timestamps: &Vec<(f32, bool)>,
 ) -> Vec<Duration> {
+    let mut first_stamp = None;
+    let mut wait_for_toggle = false;
+    let mut kills = vec![];
+    let mut num_consecutive_detections = 0;
+    let mut num_consecutive_non_detections = 0;
+    for (timestamp, has_kill) in kill_timestamps {
+        if wait_for_toggle {
+            if !has_kill {
+                num_consecutive_non_detections += 1;
+                if num_consecutive_non_detections > 2 * VIDEO_ANALYSIS_RATE {
+                    wait_for_toggle = false;
+                    num_consecutive_non_detections = 0;
+                }
+            } else {
+                num_consecutive_non_detections = 0;
+            }
+            continue;
+        }
+
+        if !has_kill {
+            if num_consecutive_detections > 0 {
+                warn!("Found kill event but no longer detecting");
+            }
+            num_consecutive_detections = 0;
+            continue;
+        }
+
+        first_stamp = first_stamp.or(Some(timestamp));
+        num_consecutive_detections += 1;
+
+        if num_consecutive_detections > consecutive_kills {
+            debug!("Found kill event");
+            kills.push(
+                Duration::from_secs_f32(*first_stamp.unwrap())
+                    + Duration::from_millis(min_offset_millis),
+            );
+            first_stamp = None;
+            wait_for_toggle = true;
+            num_consecutive_detections = 0;
+        }
+    }
+    kills
+}
+
+pub(crate) fn detect_kill_timestamps(path: &Path, min_offset_millis: u64) -> Vec<(f32, bool)> {
     let mut command = FfmpegCommand::new();
     command
-        .hwaccel("auto")
+        .hwaccel("none")
         .seek(format!("{}ms", min_offset_millis))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
-        .filter("crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
+        .filter("mpdecimate,crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")
         .no_audio()
         .rawvideo();
     debug!("Running command: {:?}", command);
     let mut process = command.spawn().unwrap();
     let video = process.iter().unwrap();
 
-    let mut first_stamp = None;
-    let mut wait_for_toggle = false;
-    let mut kills = vec![];
-    let mut num_consecutive_detections = 0;
-    let mut num_consecutive_non_detections = 0;
+    let frames = tqdm!(video, desc = "Collecting frames")
+        .filter_map(|frame| match frame {
+            FfmpegEvent::OutputFrame(f) => Some(f),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
 
-    for (i, frame) in tqdm!(video.enumerate(), desc = "Detecting kill events") {
-        if let FfmpegEvent::OutputFrame(frame) = frame {
-            let has_kill = match has_kill(&frame) {
-                Ok(v) => v,
-                Err(e) => {
-                    warn!("Failed to classify frame: {}", e);
-                    continue;
-                }
-            };
-            if cfg!(debug_assertions) {
-                let image: ImageBuffer<Rgb<u8>, _> =
-                    ImageBuffer::from_raw(frame.width, frame.height, frame.data.clone())
-                        .expect("Failed to create image buffer");
-                let label = if has_kill { "kill" } else { "no_kill" };
-                image
-                    .save(format!(
-                        "kill-data/unclassified/{}/{}-{}.png",
-                        label,
-                        i,
-                        Uuid::new_v4(),
-                    ))
-                    .unwrap();
-            }
-
-            if wait_for_toggle {
-                if !has_kill {
-                    num_consecutive_non_detections += 1;
-                    if num_consecutive_non_detections > 2 * VIDEO_ANALYSIS_RATE {
-                        wait_for_toggle = false;
-                        num_consecutive_non_detections = 0;
-                    }
-                } else {
-                    num_consecutive_non_detections = 0;
-                }
-                continue;
-            }
-
-            if !has_kill {
-                if num_consecutive_detections > 0 {
-                    warn!("Found kill event but no longer detecting");
-                }
-                num_consecutive_detections = 0;
-                continue;
-            }
-
-            first_stamp = first_stamp.or(Some(frame.timestamp));
-            num_consecutive_detections += 1;
-
-            if num_consecutive_detections > consecutive_kills {
-                debug!("Found kill event");
-                kills.push(
-                    Duration::from_secs_f32(first_stamp.unwrap())
-                        + Duration::from_millis(min_offset_millis),
-                );
-                first_stamp = None;
-                wait_for_toggle = true;
-                num_consecutive_detections = 0;
-            }
-        }
-    }
-    kills
+    let kill_timestamps = frames
+        .iter()
+        .map(|f| f.timestamp)
+        .zip(have_kills(&frames).unwrap())
+        .collect::<Vec<_>>();
+    kill_timestamps
 }
 
-fn has_kill(frame: &OutputVideoFrame) -> OrtResult<bool> {
+fn have_kills(frames: &[OutputVideoFrame]) -> OrtResult<Vec<bool>> {
     let array = Array::from_shape_vec(
-        (1, 3 * 50 * 50),
-        frame
-            .data
+        (frames.len(), 3 * 50 * 50),
+        frames
             .iter()
-            .map(|v| *v as f32 / 255.)
+            .flat_map(|frame| {
+                frame
+                    .data
+                    .iter()
+                    .map(|v| *v as f32 / 255.)
+                    .collect::<Vec<_>>()
+            })
             .collect::<Vec<_>>(),
     )
     .expect("Failed to create array");
@@ -231,5 +225,5 @@ fn has_kill(frame: &OutputVideoFrame) -> OrtResult<bool> {
     let tensor = Value::from_array(ORT_SESSION.allocator(), &array)?;
     let outputs = ORT_SESSION.run(vec![tensor])?;
     let output = outputs.first().unwrap().try_extract()?;
-    Ok(output.view().iter().all(|v: &i64| *v > 0))
+    Ok(output.view().iter().map(|v: &i64| *v > 0).collect())
 }

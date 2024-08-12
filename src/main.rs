@@ -220,7 +220,8 @@ async fn process_match(
         _ => 40000,
     });
 
-    let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 0)
+    let kill_timestamps = video::detect_kill_timestamps(&match_video_path, min_offset);
+    let detected_kill_events = video::detect_kill_events(min_offset, 0, &kill_timestamps)
         .into_iter()
         .sorted()
         .collect::<Vec<_>>();
@@ -238,7 +239,7 @@ async fn process_match(
     let offset = match offset::get_offset(&detected_kill_events, &match_kill_events, min_offset) {
         Some(offset) => offset,
         None => {
-            let detected_kill_events = video::detect_kill_events(&match_video_path, min_offset, 1)
+            let detected_kill_events = video::detect_kill_events(min_offset, 1, &kill_timestamps)
                 .into_iter()
                 .sorted()
                 .collect::<Vec<_>>();
