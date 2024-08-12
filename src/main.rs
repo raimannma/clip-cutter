@@ -45,6 +45,8 @@ struct Cli {
     force: bool,
     #[arg(long)]
     category: Option<Vec<String>>,
+    #[arg(long)]
+    exclude_category: Option<Vec<String>>,
     #[arg(long, default_value = "false")]
     only_customs: bool,
     #[arg(long, default_value = "0")]
@@ -135,6 +137,7 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
             &valo_match,
             args.remove_matches,
             &args.category,
+            &args.exclude_category,
         )
         .await
         .is_some()
@@ -155,8 +158,12 @@ async fn process_match(
     valo_match: &MatchDetailsV1,
     remove_matches: bool,
     category: &Option<Vec<String>>,
+    exclude_category: &Option<Vec<String>>,
 ) -> Option<()> {
-    debug!("Filtering for category: {:?}", category);
+    debug!(
+        "Filtering for category: {:?} excluding category: {:?}",
+        category, exclude_category
+    );
     let events = events::build_events(valo_match)
         .into_iter()
         .filter(|e| match e {
@@ -173,6 +180,11 @@ async fn process_match(
 
     let mut filtered_events = vec![];
     for event in events {
+        if let Some(exclude_category) = exclude_category.as_ref() {
+            if exclude_category.contains(&event.category(puuids).await) {
+                continue;
+            }
+        }
         if let Some(category) = category.as_ref() {
             if category.contains(&event.category(puuids).await) {
                 filtered_events.push(event);
