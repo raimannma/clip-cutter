@@ -28,10 +28,14 @@ lazy_static! {
 pub async fn find_valorant_matches_by_players(
     puuids: &HashSet<String>,
     interval: (OffsetDateTime, OffsetDateTime),
+    vod_id: usize,
+    force: bool,
 ) -> Result<Vec<MatchDetailsV1>, RequestError> {
     let mut all_matches = vec![];
     for puuid in puuids {
-        all_matches.extend(get_valorant_matches_by_player(puuid, interval.0, interval.1).await?);
+        all_matches.extend(
+            get_valorant_matches_by_player(puuid, interval.0, interval.1, vod_id, force).await?,
+        );
     }
     Ok(all_matches)
 }
@@ -47,6 +51,8 @@ async fn get_valorant_matches_by_player(
     puuid: &str,
     start: OffsetDateTime,
     end: OffsetDateTime,
+    vod_id: usize,
+    force: bool,
 ) -> Result<Vec<MatchDetailsV1>, RequestError> {
     info!("Searching valorant matches for {}", puuid);
     let http_client = Client::new();
@@ -62,6 +68,15 @@ async fn get_valorant_matches_by_player(
         .filter(|m| {
             start - Duration::from_secs(60) < m.game_start_time_millis
                 && m.game_start_time_millis < end
+        })
+        .filter(|m| {
+            let is_processed = Path::new("/processed")
+                .join(format!("{}-{}", vod_id, m.match_id))
+                .exists();
+            let is_failed = Path::new("/failed")
+                .join(format!("{}-{}", vod_id, m.match_id))
+                .exists();
+            force || !(is_processed || is_failed)
         })
         .collect();
 

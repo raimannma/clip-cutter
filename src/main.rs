@@ -88,9 +88,10 @@ pub async fn main() {
 
 async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
     let vod_interval = twitch::get_vod_start_end(vod_id).await;
-    let matches = valorant::find_valorant_matches_by_players(puuids, vod_interval)
-        .await
-        .expect("Failed to find matches");
+    let matches =
+        valorant::find_valorant_matches_by_players(puuids, vod_interval, vod_id, args.force)
+            .await
+            .expect("Failed to find matches");
 
     for valo_match in matches {
         if args.only_customs && valo_match.match_info.provisioning_flow_id != "CustomGame" {
@@ -125,11 +126,6 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
 
         let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
         let failed_path = Path::new("/failed").join(format!("{}-{}", vod_id, match_id));
-        if !args.force && (processed_path.exists() || failed_path.exists()) {
-            debug!("Skipping match: {:?}", match_id);
-            continue;
-        }
-
         if process_match(
             puuids,
             vod_id,
