@@ -144,6 +144,8 @@ impl MatchEvent for KillEvent {
             }
         } else if is_from && self.damage_item_postfix().await.is_none() {
             "AbilityKill"
+        } else if is_against && self.damage_item_postfix().await.is_none() {
+            "AbilityDeath"
         } else if is_against {
             "Death"
         } else {
