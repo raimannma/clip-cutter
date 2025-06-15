@@ -101,7 +101,7 @@ async fn get_match_details(
     region: Region,
     match_id: Uuid,
 ) -> MatchDetailsV1 {
-    let save_path = Path::new("matches/").join(format!("{}.json", match_id));
+    let save_path = Path::new("matches/").join(format!("{match_id}.json"));
     if save_path.exists() {
         let match_details = std::fs::read_to_string(save_path).expect("Failed to read match file");
         return serde_json::from_str(&match_details).expect("Failed to parse match file");
@@ -187,7 +187,7 @@ struct AgentData {
     convert = r#"{ format!("{}", agent_uuid) }"#
 )]
 pub(crate) async fn get_agent_name(agent_uuid: Uuid) -> reqwest::Result<String> {
-    let url = format!("https://valorant-api.com/v1/agents/{}", agent_uuid);
+    let url = format!("https://valorant-api.com/v1/agents/{agent_uuid}");
     let response: APIData<AgentData> = reqwest::get(url).await?.json().await?;
     Ok(response.data.display_name)
 }
@@ -205,7 +205,7 @@ struct WeaponData {
     convert = r#"{ format!("{}", weapon_uuid) }"#
 )]
 pub(crate) async fn get_weapon_name(weapon_uuid: Uuid) -> reqwest::Result<String> {
-    let url = format!("https://valorant-api.com/v1/weapons/{}", weapon_uuid);
+    let url = format!("https://valorant-api.com/v1/weapons/{weapon_uuid}");
     let response: APIData<WeaponData> = reqwest::get(url).await?.json().await?;
     Ok(response.data.display_name)
 }

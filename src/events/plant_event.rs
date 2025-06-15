@@ -67,7 +67,7 @@ impl MatchEvent for PlantEvent {
                         < (self.plant_time + Duration::from_secs(45)).as_millis() as u64
             })
             .count();
-        format!("{}k", kills)
+        format!("{kills}k")
     }
 
     fn game_time_interval(&self) -> (Duration, Duration) {

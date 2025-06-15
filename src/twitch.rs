@@ -1,6 +1,6 @@
 use crate::video::format_ffmpeg_time;
 use lazy_static::lazy_static;
-use log::{debug, info, warn};
+use log::{debug, info};
 use serde::Deserialize;
 use std::path::Path;
 use std::process::ExitStatus;
@@ -31,7 +31,7 @@ struct TwitchVideo {
 pub async fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime) {
     let client = reqwest::Client::new();
     let response: ApiData<Vec<TwitchVideo>> = client
-        .get(format!("https://api.twitch.tv/helix/videos?id={}", vod_id))
+        .get(format!("https://api.twitch.tv/helix/videos?id={vod_id}"))
         .header("Client-ID", TWITCH_CLIENT_ID.as_str())
         .bearer_auth(TWITCH_ACCESS_TOKEN.as_str())
         .send()
@@ -45,7 +45,7 @@ pub async fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime
         .data
         .into_iter()
         .find(|video| video.id == vod_id.to_string())
-        .unwrap_or_else(|| panic!("Failed to find video: {}", vod_id));
+        .unwrap_or_else(|| panic!("Failed to find video: {vod_id}"));
 
     let vod_start = twitch_video.created_at.clone();
     let vod_length = parse_length(twitch_video.duration.as_str());
@@ -108,7 +108,7 @@ fn download_with_ytdlp(
         .arg("--get-url")
         .arg("-f")
         .arg("b")
-        .arg(format!("https://www.twitch.tv/videos/{}", vod_id))
+        .arg(format!("https://www.twitch.tv/videos/{vod_id}"))
         .output()
         .unwrap()
         .stdout;

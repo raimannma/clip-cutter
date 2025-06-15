@@ -82,7 +82,7 @@ pub(crate) fn split_video(
     let metadata = match metadata {
         Some(metadata) => metadata
             .into_iter()
-            .map(|(k, v)| format!(" -metadata {}={}", k, v))
+            .map(|(k, v)| format!(" -metadata {k}={v}"))
             .collect::<Vec<_>>()
             .join(""),
         None => "".to_string(),
@@ -122,9 +122,9 @@ pub(crate) fn format_ffmpeg_time(time: Duration, with_millis: bool) -> String {
     let seconds = millis / 1000 % 60;
     let millis = millis % 1000;
     if with_millis {
-        format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis)
+        format!("{hours:02}:{minutes:02}:{seconds:02}.{millis:03}")
     } else {
-        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+        format!("{hours:02}:{minutes:02}:{seconds:02}")
     }
 }
 
@@ -181,7 +181,7 @@ pub(crate) fn detect_kill_timestamps(path: &Path, min_offset_millis: u64) -> Vec
     let mut command = FfmpegCommand::new();
     command
         .hwaccel("auto")
-        .seek(format!("{}ms", min_offset_millis))
+        .seek(format!("{min_offset_millis}ms"))
         .input(path.to_str().unwrap())
         .rate(VIDEO_ANALYSIS_RATE as f32)
         .filter("mpdecimate,crop=200:200:in_w/2-100:0.7*in_h,scale=50:50")

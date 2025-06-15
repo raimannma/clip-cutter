@@ -124,8 +124,8 @@ async fn process_vod(vod_id: usize, puuids: &HashSet<String>, args: Cli) {
         }
         let match_id = valo_match.match_info.match_id;
 
-        let processed_path = Path::new("/processed").join(format!("{}-{}", vod_id, match_id));
-        let failed_path = Path::new("/failed").join(format!("{}-{}", vod_id, match_id));
+        let processed_path = Path::new("/processed").join(format!("{vod_id}-{match_id}"));
+        let failed_path = Path::new("/failed").join(format!("{vod_id}-{match_id}"));
         if process_match(
             puuids,
             vod_id,
@@ -296,12 +296,9 @@ async fn process_match(
         let hours = seconds / 3600;
         let minutes = (seconds % 3600) / 60;
         let seconds = seconds % 60;
-        let event_vod_time = format!("{:02}-{:02}-{:02}", hours, minutes, seconds);
+        let event_vod_time = format!("{hours:02}-{minutes:02}-{seconds:02}");
 
-        let clip_name = format!(
-            "{}_{}_{}_{}.mp4",
-            event_vod_time, event_date, map_name, name_postfix
-        );
+        let clip_name = format!("{event_vod_time}_{event_date}_{map_name}_{name_postfix}.mp4");
         let clip_path = Path::new("clips")
             .join(format!(
                 "{}_{}",
