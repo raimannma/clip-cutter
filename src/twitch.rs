@@ -68,9 +68,9 @@ pub(crate) fn download_vod(
     }
     info!("Saving VOD: {} from {:?} to {:?}", vod_id, start, end);
     std::fs::create_dir_all(out_path.parent().unwrap())?;
-    if let Err(e) = download_with_twitchdl(vod_id, out_path, start, end) {
-        warn!("Twitch-DL failed: {}", e);
-    }
+    // if let Err(e) = download_with_twitchdl(vod_id, out_path, start, end) {
+    //     warn!("Twitch-DL failed: {}", e);
+    // }
     if !out_path.exists() {
         download_with_ytdlp(vod_id, out_path, start, end)
     } else {
