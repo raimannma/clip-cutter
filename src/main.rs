@@ -223,8 +223,8 @@ async fn process_match(
         .expect("Failed to save video");
 
     let min_offset = valo_match.match_info.queue_id.map_or(40000, |q| match q {
-        Queue::DEATHMATCH => 0,
-        Queue::COMPETITIVE => 60000,
+        Queue::Deathmatch => 0,
+        Queue::Competitive => 60000,
         _ => 40000,
     });
 

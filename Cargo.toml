@@ -14,24 +14,25 @@ strip = true
 [dependencies]
 clap = { version = "4.5.45", features = ["derive"] }
 futures = "0.3.31"
-kdam = "0.5.2"
+kdam = "0.6.3"
 reqwest = "0.12.23"
 time = { version = "0.3.41", features = ["parsing", "formatting"] }
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.18.0", features = ["v4"] }
-valorant_api_official = "0.0.10"
+valorant_api_official = "0.2.0"
 serde_json = "1.0.142"
 serde = "1.0.219"
-ffmpeg-sidecar = "1.2.0"
-itertools = "0.13.0"
+ffmpeg-sidecar = "2.1.0"
+itertools = "0.14.0"
 ndarray = "0.15"
 log = "0.4.27"
 rand = "0.9.2"
 lazy_static = "1.5.0"
-cached = { version = "0.51.4", features = ["tokio", "async"] }
+cached = { version = "0.56.0", features = ["tokio", "async"] }
 dotenv = "0.15.0"
 env_logger = "0.11.8"
 tpe = { git = "https://github.com/raimannma/tpe", version = "0.2.0" }
 ort = "1.16.3"
 filetime_creation = "0.2.0"
 tuple-conv = "1.0.1"
+chrono = "0.4.41"

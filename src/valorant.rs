@@ -66,8 +66,9 @@ async fn get_valorant_matches_by_player(
     let matches: Vec<&MatchListsEntry> = matches
         .iter()
         .filter(|m| {
-            start - Duration::from_secs(60) < m.game_start_time_millis
-                && m.game_start_time_millis < end
+            (start - Duration::from_secs(60)).unix_timestamp()
+                < m.game_start_time_millis.timestamp()
+                && m.game_start_time_millis.timestamp() < end.unix_timestamp()
         })
         .filter(|m| {
             let is_processed = Path::new("/processed")
@@ -136,7 +137,7 @@ async fn get_region(
     http_client: &Client,
     puuid: &str,
 ) -> Result<Region, RequestError> {
-    valorant_api_official::get_active_shards_v1(credentials_manager, http_client, puuid)
+    valorant_api_official::get_active_shards_v1(credentials_manager, http_client, "eu", puuid)
         .await
         .map(|shard| {
             Region::from_str(&shard.active_shard.to_string()).expect("Failed to get region")
@@ -153,9 +154,15 @@ pub(crate) async fn get_puuid(riot_id: &str) -> Result<String, RequestError> {
     }
     let (name, tag) = riot_id.split_once('#').expect("Failed to split riot id");
 
-    valorant_api_official::get_accounts_by_name_v1(&credentials_manager, &http_client, name, tag)
-        .await
-        .map(|accounts| accounts.puuid)
+    valorant_api_official::get_accounts_by_name_v1(
+        &credentials_manager,
+        &http_client,
+        "eu",
+        name,
+        tag,
+    )
+    .await
+    .map(|accounts| accounts.puuid)
 }
 
 pub(crate) fn get_match_kills(valo_match: &MatchDetailsV1) -> Vec<PlayerRoundKill> {

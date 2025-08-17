@@ -52,7 +52,7 @@ pub async fn get_vod_start_end(vod_id: usize) -> (OffsetDateTime, OffsetDateTime
     let start_time = PrimitiveDateTime::parse(vod_start.as_str(), &Rfc3339)
         .expect("Failed to parse start time")
         .assume_offset(UtcOffset::UTC);
-    let end_time = start_time + time::Duration::new(vod_length as i64, 0);
+    let end_time = start_time + Duration::new(vod_length as u64, 0);
     (start_time, end_time)
 }
 
