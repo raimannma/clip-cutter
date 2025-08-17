@@ -137,7 +137,7 @@ async fn get_region(
     http_client: &Client,
     puuid: &str,
 ) -> Result<Region, RequestError> {
-    valorant_api_official::get_active_shards_v1(credentials_manager, http_client, "eu", puuid)
+    valorant_api_official::get_active_shards_v1(credentials_manager, http_client, "europe", puuid)
         .await
         .map(|shard| {
             Region::from_str(&shard.active_shard.to_string()).expect("Failed to get region")
@@ -157,7 +157,7 @@ pub(crate) async fn get_puuid(riot_id: &str) -> Result<String, RequestError> {
     valorant_api_official::get_accounts_by_name_v1(
         &credentials_manager,
         &http_client,
-        "eu",
+        "europe",
         name,
         tag,
     )
