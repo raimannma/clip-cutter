@@ -109,8 +109,7 @@ fn download_with_ytdlp(
         .arg("-f")
         .arg("b")
         .arg(format!("https://www.twitch.tv/videos/{vod_id}"))
-        .output()
-        .unwrap()
+        .output()?
         .stdout;
     let download_link = String::from_utf8(download_link).unwrap();
     let download_link = download_link.trim();
