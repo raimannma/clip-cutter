@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH=/root/.local/bin:$PATH
-RUN pipx ensurepath && pipx install twitch-dl && pipx install yt-dlp && pipx install gunicorn && pipx install flask
+RUN pipx ensurepath && pipx install twitch-dl && pipx install yt-dlp
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 COPY --from=builder /app/target/release/clip-cutter /usr/local/bin/clip-cutter
