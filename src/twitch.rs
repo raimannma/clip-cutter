@@ -104,17 +104,17 @@ fn download_with_ytdlp(
     start: Duration,
     end: Duration,
 ) -> std::io::Result<ExitStatus> {
-    let download_link = std::process::Command::new("yt-dlp")
-        .arg("--get-url")
+    let mut cmd = std::process::Command::new("yt-dlp");
+    cmd.arg("--get-url")
         .arg("-f")
         .arg("b")
-        .arg(format!("https://www.twitch.tv/videos/{vod_id}"))
-        .output()?
-        .stdout;
+        .arg(format!("https://www.twitch.tv/videos/{vod_id}"));
+    debug!("Running command: {:?}", cmd);
+    let download_link = cmd.output()?.stdout;
     let download_link = String::from_utf8(download_link).unwrap();
     let download_link = download_link.trim();
-    std::process::Command::new("ffmpeg")
-        .arg("-y")
+    let mut cmd = std::process::Command::new("ffmpeg");
+    cmd.arg("-y")
         .arg("-ss")
         .arg(format_ffmpeg_time(start, true))
         .arg("-to")
@@ -124,8 +124,9 @@ fn download_with_ytdlp(
         .arg("-y")
         .arg("-c")
         .arg("copy")
-        .arg(out_path)
-        .status()
+        .arg(out_path);
+    debug!("Running command: {:?}", cmd);
+    cmd.status()
 }
 
 pub fn parse_length(length: &str) -> usize {
